@@ -226,7 +226,10 @@ public static class TargetViewManager
         Vector2I viewportPos = Utils.Lerp(Plugin.Settings.Position, zoomedPos, smoothZoomAmount);
         Vector2I viewportRes = Utils.Lerp(Plugin.Settings.Size, zoomedSize, smoothZoomAmount);
 
-        if (viewportRes.X <= 0 || viewportRes.Y <= 0 || viewportPos.X >= backbufferRes.X || viewportPos.Y >= backbufferRes.Y)
+        bool invalidPos = viewportPos.X >= backbufferRes.X || viewportPos.Y >= backbufferRes.Y;
+        bool invalidRes = viewportRes.X < 20 || viewportRes.Y < 20 || viewportRes.X > backbufferRes.X || viewportRes.Y > backbufferRes.Y;
+
+        if (invalidPos || invalidRes)
             return false;
 
         {
@@ -245,7 +248,7 @@ public static class TargetViewManager
                 ProjOffsetY = 0,
             }, renderCamera.FarFarPlaneDistance, 1, false);
 
-            TargetViewRenderer.Draw(tempRtv);
+            TargetViewRenderer.Draw(tempRtv, true);
 
             // restore camera settings
             SetRendererState(originalRendererState);

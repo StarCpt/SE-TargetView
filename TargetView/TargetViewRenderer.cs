@@ -71,7 +71,7 @@ public static class TargetViewRenderer
     }
 
     // all profiler calls removed since they don't do anything in the release build of the game
-    public static void Draw(IRtvBindable renderTarget)
+    public static void Draw(IRtvBindable renderTarget, bool drawBorder)
     {
         IsDrawing = true;
         FixOcclusion = Plugin.Settings.OcclusionFix;
@@ -142,8 +142,15 @@ public static class TargetViewRenderer
             MyBillboardRenderer.RenderPostPP(RC, MyGBuffer.Main.ResolvedDepthStencil.SrvDepth, postprocessResult.SRgb);
         }
 
-        RC.ClearRtv(renderTarget, new RawColor4(0, 0, 0, 1)); // don't remove, needed to ensure 0 alpha (TODO: use custom blend state to write 0 alpha)
-        CopyReplaceNoAlpha(postprocessResult.SRgb, renderTarget, false);
+        RC.ClearRtv(renderTarget, new RawColor4(1, 1, 1, 1)); // clear with white background for border - janky but fast!
+        if (drawBorder && MyRender11.ViewportResolution.X > 2 && MyRender11.ViewportResolution.Y > 2)
+        {
+            CopyReplaceNoAlpha(postprocessResult.SRgb, renderTarget, false, Vector2I.One, MyRender11.ViewportResolution - 2);
+        }
+        else
+        {
+            CopyReplaceNoAlpha(postprocessResult.SRgb, renderTarget, false, Vector2I.Zero, MyRender11.ViewportResolution);
+        }
 
         postprocessResult.Release();
         MyManagers.Cull.OnFrameEnd();
@@ -152,7 +159,7 @@ public static class TargetViewRenderer
         FixOcclusion = false;
     }
 
-    private static void CopyReplaceNoAlpha(ISrvBindable source, IRtvBindable destination, bool stretch)
+    private static void CopyReplaceNoAlpha(ISrvBindable source, IRtvBindable destination, bool stretch, Vector2I destOffset, Vector2I destSize)
     {
         MyRender11.RC.SetBlendState(MyBlendStateManager.BlendReplaceNoAlphaChannel);
 
@@ -162,7 +169,7 @@ public static class TargetViewRenderer
         MyRender11.RC.SetRtv(destination);
         MyRender11.RC.SetDepthStencilState(MyDepthStencilStateManager.IgnoreDepthStencil);
         MyRender11.RC.PixelShader.SetSrv(0, source);
-        MyScreenPass.DrawFullscreenQuad(MyRender11.RC, new MyViewport(destination.Size));
+        MyScreenPass.DrawFullscreenQuad(MyRender11.RC, new MyViewport(destOffset.X, destOffset.Y, destSize.X, destSize.Y));
     }
 
 }
