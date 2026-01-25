@@ -216,7 +216,7 @@ public static class TargetViewManager
         Vector3D cameraPos = controlledEntity.BoundingSphere.Center + (targetDir * controlledEntity.BoundingSphere.Radius);
 
         double targetDist = Vector3D.Distance(targetPos, cameraPos);
-        double fov = 2 * Math.Asin(target.BoundingSphere.Radius / targetDist);
+        double fov = 2 * Math.Atan2(target.BoundingSphere.Radius, targetDist);
 
         Vector2I backbufferRes = MyRender11.BackBufferResolution;
 
