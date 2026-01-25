@@ -110,8 +110,6 @@ public static class TargetViewManager
 
     private static bool _zoom = false;
     private static float _zoomAmount = 0; // 0 = no zoom, 1 = full zoom
-    private static readonly Vector2I _zoomedPos = new Vector2I(10, 10);
-    private static readonly Vector2I _zoomedSize = new Vector2I(MyRender11.BackBufferResolution - 20);
 
     /// <summary>
     /// Main thread only
@@ -220,6 +218,10 @@ public static class TargetViewManager
 
         double targetDist = Vector3D.Distance(targetPos, cameraPos);
         double fov = 2 * Math.Atan2(target.BoundingSphere.Radius, targetDist);
+
+        if (targetDist < (controlledEntity.BoundingSphere.Radius + target.BoundingSphere.Radius) ||
+            targetDist > renderCamera.FarPlaneDistance)
+            return false;
 
         Vector2I backbufferRes = MyRender11.BackBufferResolution;
 
