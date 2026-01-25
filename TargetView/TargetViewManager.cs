@@ -170,6 +170,9 @@ public static class TargetViewManager
     /// <returns></returns>
     public static bool Draw(Format rtvFormat)
     {
+        if (MySession.Static is null || !MySession.Static.Ready)
+            return false;
+
         MyCamera renderCamera = MySector.MainCamera;
         if (renderCamera is null)
             return false;

@@ -15,6 +15,9 @@ namespace TargetView.Patches
         [HarmonyPrefix]
         public static void MyRender11_DrawGameScene_Prefix(IRtvBindable renderTarget)
         {
+            if (renderTarget is null)
+                return;
+
             if (!Plugin.Settings.Enabled)
                 return;
 
@@ -25,7 +28,7 @@ namespace TargetView.Patches
         [HarmonyPostfix]
         public static void MyRender11_DrawGameScene_Postfix(IRtvBindable renderTarget)
         {
-            if (TargetViewTexture is not null)
+            if (renderTarget is not null && TargetViewTexture is not null)
             {
                 //MyCopyToRT.Run(renderTarget, TargetViewTexture, customViewport: TargetViewViewport, shouldStretch: true);
                 //MyRender11.RC.SetRtvNull();
