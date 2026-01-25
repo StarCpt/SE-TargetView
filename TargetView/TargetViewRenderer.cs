@@ -13,7 +13,7 @@ using VRageRender.Messages;
 
 namespace TargetView;
 
-public static class CameraViewRenderer
+public static class TargetViewRenderer
 {
     public static bool IsDrawing { get; private set; }
     public static bool FixOcclusion = false;

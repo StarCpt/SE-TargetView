@@ -39,7 +39,7 @@ static class OcclusionFixPatches
         patch.Add(new CodeInstruction(OpCodes.Brtrue_S, label));
         
         // load bool CameraViewRenderer.FixOcclusion
-        patch.Add(CodeInstruction.LoadField(typeof(CameraViewRenderer), nameof(CameraViewRenderer.FixOcclusion)));
+        patch.Add(CodeInstruction.LoadField(typeof(TargetViewRenderer), nameof(TargetViewRenderer.FixOcclusion)));
         // jump to label if !CameraViewRenderer.FixOcclusion
         patch.Add(new CodeInstruction(OpCodes.Brfalse_S, label));
         
@@ -60,7 +60,7 @@ static class OcclusionFixPatches
     [HarmonyPrefix]
     static bool MyOcclusionTask_DoWork_Prefix(ref int __result, MyCullQuery cullQuery)
     {
-        if (cullQuery.ViewId is GBUFFER_PASS_VIEW_ID && CameraViewRenderer.FixOcclusion)
+        if (cullQuery.ViewId is GBUFFER_PASS_VIEW_ID && TargetViewRenderer.FixOcclusion)
         {
             __result = 0;
             return false;

@@ -2,41 +2,44 @@
 using System.Xml;
 using System.Xml.Serialization;
 using VRage.FileSystem;
+using VRageMath;
 
 namespace TargetView
 {
-    public class CameraLCDSettings
+    public class TargetViewSettings
     {
-        private const string fileName = "CameraLCDSettings.xml";
+        private const string fileName = "TargetViewSettings.xml";
         private static string FilePath => Path.Combine(MyFileSystem.UserDataPath, "Storage", fileName);
 
-        protected CameraLCDSettings()
+        protected TargetViewSettings()
         {
         }
 
         public bool Enabled { get; set; } = true;
         public int Ratio { get; set; } = 2;
-        public int Range { get; set; } = 40;
         public bool HeadFix { get; set; } = true;
         public bool OcclusionFix { get; set; } = true;
 
-        public static CameraLCDSettings Load()
+        public Vector2I Position { get; set; }
+        public Vector2I Size { get; set; }
+
+        public static TargetViewSettings Load()
         {
             string file = FilePath;
             if (File.Exists(file))
             {
                 try
                 {
-                    XmlSerializer serializer = new XmlSerializer(typeof(CameraLCDSettings));
+                    XmlSerializer serializer = new XmlSerializer(typeof(TargetViewSettings));
                     using (XmlReader xml = XmlReader.Create(file))
                     {
-                        return (CameraLCDSettings)serializer.Deserialize(xml);
+                        return (TargetViewSettings)serializer.Deserialize(xml);
                     }
                 }
                 catch { }
             }
 
-            return new CameraLCDSettings();
+            return new TargetViewSettings();
         }
 
         public void Save()
@@ -45,7 +48,7 @@ namespace TargetView
             {
                 string file = FilePath;
                 Directory.CreateDirectory(Path.GetDirectoryName(file));
-                XmlSerializer serializer = new XmlSerializer(typeof(CameraLCDSettings));
+                XmlSerializer serializer = new XmlSerializer(typeof(TargetViewSettings));
                 using (StreamWriter stream = File.CreateText(file))
                 {
                     serializer.Serialize(stream, this);

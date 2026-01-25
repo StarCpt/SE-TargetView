@@ -27,7 +27,7 @@ namespace TargetView.Gui
 
         public override void RecreateControls(bool constructor)
         {
-            CameraLCDSettings settings = Plugin.Settings;
+            TargetViewSettings settings = Plugin.Settings;
 
             MyGuiControlLabel caption = AddCaption("Camera LCD Settings");
             Vector2 pos = caption.Position;
@@ -55,13 +55,13 @@ namespace TargetView.Gui
             AddCustomSliderLabel(ratioSlider, val => $"{val}x");
             pos.Y += ratioSlider.Size.Y + space;
 
-            MyGuiControlSlider rangeSlider = new MyGuiControlSlider(pos, 10, 500, 0.2f, settings.Range, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP, intValue: true);
-            rangeSlider.SetToolTip("Stops rendering camera view if the distance between\nthe view position and lcd screen exceeds this value.");
-            rangeSlider.ValueChanged += RangeValueChanged;
-            Controls.Add(rangeSlider);
-            AddCaption(rangeSlider, "Render range");
-            AddCustomSliderLabel(rangeSlider, val => $"{val}m");
-            pos.Y += rangeSlider.Size.Y + space;
+            //MyGuiControlSlider rangeSlider = new MyGuiControlSlider(pos, 10, 500, 0.2f, settings.Range, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP, intValue: true);
+            //rangeSlider.SetToolTip("Stops rendering camera view if the distance between\nthe view position and lcd screen exceeds this value.");
+            //rangeSlider.ValueChanged += RangeValueChanged;
+            //Controls.Add(rangeSlider);
+            //AddCaption(rangeSlider, "Render range");
+            //AddCustomSliderLabel(rangeSlider, val => $"{val}m");
+            //pos.Y += rangeSlider.Size.Y + space;
 
             MyGuiControlCheckbox headFixCheckbox = new MyGuiControlCheckbox(pos, isChecked: settings.HeadFix, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
             headFixCheckbox.SetToolTip("Fix invisible character head on camera lcd in 1st person view.\nMay cause issues with modded characters.");
@@ -112,7 +112,7 @@ namespace TargetView.Gui
 
         void IsEnabledCheckedChanged(MyGuiControlCheckbox cb) => Plugin.Settings.Enabled = cb.IsChecked;
         void RenderRatioChanged(MyGuiControlSlider slider) => Plugin.Settings.Ratio = (int)slider.Value;
-        void RangeValueChanged(MyGuiControlSlider slider) => Plugin.Settings.Range = (int)slider.Value;
+        //void RangeValueChanged(MyGuiControlSlider slider) => Plugin.Settings.Range = (int)slider.Value;
         void IsHeadfixCheckedChanged(MyGuiControlCheckbox cb) => Plugin.Settings.HeadFix = cb.IsChecked;
         void IsOcclusionfixCheckedChanged(MyGuiControlCheckbox cb) => Plugin.Settings.OcclusionFix = cb.IsChecked;
     }

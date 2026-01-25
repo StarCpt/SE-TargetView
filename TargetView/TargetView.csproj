@@ -3,10 +3,9 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <OutputType>Library</OutputType>
-    <RootNamespace>CameraLCD</RootNamespace>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <LangVersion>latest</LangVersion>
-    <AssemblyName>CameraLCD-Remastered</AssemblyName>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +16,10 @@
     <Reference Include="netstandard" />
     <Reference Include="ProtoBuf.Net">
       <HintPath>$(Bin64)\ProtoBuf.Net.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="ProtoBuf.Net.Core">
+      <HintPath>$(Bin64)\ProtoBuf.Net.Core.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Sandbox.Common">

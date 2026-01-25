@@ -10,20 +10,20 @@ static class Patch_MyEnvironmentProbe
     [HarmonyPrefix]
     static bool UpdateCullQuery_Prefix()
     {
-        return !CameraViewRenderer.IsDrawing;
+        return !TargetViewRenderer.IsDrawing;
     }
 
     [HarmonyPatch(nameof(MyEnvironmentProbe.FinalizeEnvProbes))]
     [HarmonyPrefix]
     static bool FinalizeEnvProbes_Prefix()
     {
-        return !CameraViewRenderer.IsDrawing;
+        return !TargetViewRenderer.IsDrawing;
     }
 
     [HarmonyPatch(nameof(MyEnvironmentProbe.UpdateProbe))]
     [HarmonyPrefix]
     static bool UpdateProbe_Prefix()
     {
-        return !CameraViewRenderer.IsDrawing;
+        return !TargetViewRenderer.IsDrawing;
     }
 }

@@ -12,12 +12,12 @@ namespace TargetView
 {
     public class Plugin : IPlugin
     {
-        public static CameraLCDSettings Settings { get; private set; }
+        public static TargetViewSettings Settings { get; private set; }
         public static Boxed<(uint CharacterActorId, string[] MaterialsDisabledInFirst)>? FirstPersonCharacter = null;
 
         public Plugin()
         {
-            Settings = CameraLCDSettings.Load();
+            Settings = TargetViewSettings.Load();
         }
 
         public void Init(object gameInstance)
@@ -28,7 +28,15 @@ namespace TargetView
         private uint _counter = 0;
         public void Update()
         {
-            if (++_counter % 10 != 0 || !Settings.Enabled)
+            if (!Settings.Enabled)
+                return;
+
+            if (MySession.Static != null && MySession.Static.Ready)
+            {
+                TargetViewManager.Update();
+            }
+
+            if (++_counter % 10 != 0)
                 return;
 
             if (MySession.Static?.CameraController?.Entity is MyCharacter character && (character.IsInFirstPersonView || character.ForceFirstPersonCamera))
