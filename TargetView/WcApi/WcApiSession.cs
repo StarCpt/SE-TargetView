@@ -34,6 +34,9 @@ internal class WcApiSession : MySessionComponentBase
             return null;
         }
 
-        return _api.GetAiFocus(shooter);
+        var target = _api.GetAiFocus(shooter);
+        if (target is null || !_api.IsInRange(shooter).Item1)
+            return null;
+        return target;
     }
 }
