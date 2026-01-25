@@ -17,6 +17,8 @@ namespace TargetView.Gui
         private const float space = 0.01f;
         private Vector2I screenRes;
 
+        private static readonly Vector2I _minSize = new Vector2I(50, 50);
+
         public MyGuiScreenPluginConfig() : base(new Vector2(0.5f, 0.5f), MyGuiConstants.SCREEN_BACKGROUND_COLOR, new Vector2(0.47f, 0.6f), false, null, MySandboxGame.Config.UIBkOpacity, MySandboxGame.Config.UIOpacity)
         {
             EnabledBackgroundFade = true;
@@ -220,7 +222,7 @@ namespace TargetView.Gui
         {
             if (int.TryParse(box.Text, out var result))
             {
-                Plugin.Settings.Size = Plugin.Settings.Size with { X = MathHelper.Clamp(result, 0, screenRes.X) };
+                Plugin.Settings.Size = Plugin.Settings.Size with { X = MathHelper.Clamp(result, _minSize.X, screenRes.X) };
             }
         }
 
@@ -228,7 +230,7 @@ namespace TargetView.Gui
         {
             if (int.TryParse(box.Text, out var result))
             {
-                Plugin.Settings.Size = Plugin.Settings.Size with { Y = MathHelper.Clamp(result, 0, screenRes.Y) };
+                Plugin.Settings.Size = Plugin.Settings.Size with { Y = MathHelper.Clamp(result, _minSize.Y, screenRes.Y) };
             }
         }
 
