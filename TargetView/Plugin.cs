@@ -10,7 +10,7 @@ using VRage.Plugins;
 
 namespace TargetView
 {
-    public class Plugin : IPlugin
+    public class Plugin : IPlugin, IHandleInputPlugin
     {
         public static TargetViewSettings Settings { get; private set; }
         public static Boxed<(uint CharacterActorId, string[] MaterialsDisabledInFirst)>? FirstPersonCharacter = null;
@@ -34,6 +34,7 @@ namespace TargetView
             if (MySession.Static != null && MySession.Static.Ready)
             {
                 TargetViewManager.Update();
+                TargetViewManager.HandleInput();
             }
 
             if (++_counter % 10 != 0)
@@ -47,6 +48,11 @@ namespace TargetView
             {
                 FirstPersonCharacter = null;
             }
+        }
+
+        public void HandleInput()
+        {
+            TargetViewManager.HandleInput();
         }
 
         public void OpenConfigDialog()

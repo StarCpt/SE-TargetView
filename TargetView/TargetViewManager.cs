@@ -16,6 +16,7 @@ using VRage;
 using VRage.Game.Components;
 using VRage.Game.Entity;
 using VRage.Game.Utils;
+using VRage.Input;
 using VRage.Render.Scene;
 using VRage.Render11.Common;
 using VRage.Render11.Resources;
@@ -107,6 +108,11 @@ public static class TargetViewManager
     private static TargetData? _target = null;
     private static readonly object _sync = new();
 
+    private static bool _zoom = false;
+    private static float _zoomAmount = 0; // 0 = no zoom, 1 = full zoom
+    private static readonly Vector2I _zoomedPos = new Vector2I(10, 10);
+    private static readonly Vector2I _zoomedSize = new Vector2I(MyRender11.BackBufferResolution - 20);
+
     /// <summary>
     /// Main thread only
     /// </summary>
@@ -144,16 +150,25 @@ public static class TargetViewManager
                     BoundingSphere = target.PositionComp.WorldVolume,
                 };
             }
+
+            bool newZoom = MyInput.Static.IsKeyPress(Plugin.Settings.ZoomKey);
+            if (newZoom != _zoom)
+            {
+                _zoomAmount = _zoom ? Utils.CubicEaseOut(_zoomAmount) : Utils.CubicEaseIn(_zoomAmount);
+                _zoom = newZoom;
+            }
         }
     }
 
-    private static Stopwatch _sw = new();
+    public static void HandleInput()
+    {
+    }
 
     /// <summary>
     /// Render thread only
     /// </summary>
     /// <returns></returns>
-    public static bool Draw()
+    public static bool Draw(Format rtvFormat)
     {
         MyCamera renderCamera = MySector.MainCamera;
         if (renderCamera is null)
@@ -161,6 +176,7 @@ public static class TargetViewManager
 
         ControlledEntityData controlledEntity;
         TargetData target;
+        float zoomAmount;
         
         lock (_sync)
         {
@@ -173,7 +189,13 @@ public static class TargetViewManager
                 controlledEntity = _controlled.Value;
                 target = _target.Value;
             }
+
+            float zoomDelta = MyCommon.GetLastFrameDelta() * (_zoom ? 1 : -1) * 5;
+            _zoomAmount = MathHelper.Clamp(_zoomAmount + zoomDelta, 0, 1);
+            zoomAmount = _zoomAmount;
         }
+
+        float smoothZoomAmount = MathHelper.Saturate(_zoom ? Utils.CubicEaseOut(zoomAmount) : Utils.CubicEaseIn(zoomAmount));
 
         var originalRendererState = new RendererState
         {
@@ -187,7 +209,6 @@ public static class TargetViewManager
             ViewportResolution = MyRender11.ViewportResolution,
             ResolutionI = MyRender11.ResolutionI,
         };
-
         var originalCameraState = CameraState.From(MyRender11.Environment.Matrices);
 
         Vector3D targetPos = target.BoundingSphere.Center;
@@ -197,15 +218,25 @@ public static class TargetViewManager
         double targetDist = Vector3D.Distance(targetPos, cameraPos);
         double fov = 2 * Math.Asin(target.BoundingSphere.Radius / targetDist);
 
+        Vector2I backbufferRes = MyRender11.BackBufferResolution;
+
+        Vector2I zoomedPos = new Vector2I(20);
+        Vector2I zoomedSize = new Vector2I(backbufferRes - (zoomedPos * 2));
+
+        Vector2I viewportPos = Utils.Lerp(Plugin.Settings.Position, zoomedPos, smoothZoomAmount);
+        Vector2I viewportRes = Utils.Lerp(Plugin.Settings.Size, zoomedSize, smoothZoomAmount);
+
+        if (viewportRes.X <= 0 || viewportRes.Y <= 0 || viewportPos.X >= backbufferRes.X || viewportPos.Y >= backbufferRes.Y)
+            return false;
+
         {
-            var tempRtv = MyManagers.RwTexturesPool.BorrowRtv("TargetViewRtv", 500, 500, Format.R16G16B16A16_Float);
+            var tempRtv = MyManagers.RwTexturesPool.BorrowRtv("TargetViewRtv", backbufferRes.X, backbufferRes.Y, rtvFormat);
 
             // set state for CameraLCD rendering
-            SetRendererState(RendererState.GetCameraViewState(tempRtv.Size));
-            GetViewMatrixAndPosition(cameraPos, controlledEntity.UpVector, targetPos, out MatrixD cameraViewMatrix);
+            SetRendererState(RendererState.GetCameraViewState(viewportRes));
             SetCameraViewMatrix(originalCameraState with
             {
-                ViewMatrix = cameraViewMatrix,
+                ViewMatrix = GetViewMatrixAndPosition(cameraPos, controlledEntity.UpVector, targetPos),
                 Fov = (float)fov,
                 NearPlane = renderCamera.NearPlaneDistance,
                 FarPlane = renderCamera.FarPlaneDistance,
@@ -215,23 +246,21 @@ public static class TargetViewManager
             }, renderCamera.FarFarPlaneDistance, 1, false);
 
             TargetViewRenderer.Draw(tempRtv);
-            MyRender11.RC.SetRtvNull();
 
             // restore camera settings
             SetRendererState(originalRendererState);
             SetCameraViewMatrix(originalCameraState, renderCamera.FarFarPlaneDistance, 0, false);
 
             Patch_MyRender11.TargetViewTexture = tempRtv;
+            Patch_MyRender11.TargetViewViewport = new MyViewport(viewportPos.X, viewportPos.Y, viewportRes.X, viewportRes.Y);
         }
 
         return true;
     }
 
-    private static void GetViewMatrixAndPosition(Vector3D cameraPos, Vector3D cameraUp, Vector3D targetPos, out MatrixD viewMatrix)
+    private static MatrixD GetViewMatrixAndPosition(Vector3D cameraPos, Vector3D cameraUp, Vector3D targetPos)
     {
-        viewMatrix = MatrixD.CreateLookAt(cameraPos, targetPos, cameraUp);
-
-        //throw new NotImplementedException();
+        return MatrixD.CreateLookAt(cameraPos, targetPos, cameraUp);
     }
 
     private static void SetRendererState(RendererState state)

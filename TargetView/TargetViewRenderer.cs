@@ -142,8 +142,8 @@ public static class TargetViewRenderer
             MyBillboardRenderer.RenderPostPP(RC, MyGBuffer.Main.ResolvedDepthStencil.SrvDepth, postprocessResult.SRgb);
         }
 
-        RC.ClearRtv(renderTarget, new RawColor4(0, 0, 0, 0)); // don't remove, needed to ensure 0 alpha (TODO: use custom blend state to write 0 alpha)
-        CopyReplaceNoAlpha(postprocessResult.SRgb, renderTarget);
+        RC.ClearRtv(renderTarget, new RawColor4(0, 0, 0, 1)); // don't remove, needed to ensure 0 alpha (TODO: use custom blend state to write 0 alpha)
+        CopyReplaceNoAlpha(postprocessResult.SRgb, renderTarget, false);
 
         postprocessResult.Release();
         MyManagers.Cull.OnFrameEnd();
@@ -152,12 +152,12 @@ public static class TargetViewRenderer
         FixOcclusion = false;
     }
 
-    private static void CopyReplaceNoAlpha(ISrvBindable source, IRtvBindable destination)
+    private static void CopyReplaceNoAlpha(ISrvBindable source, IRtvBindable destination, bool stretch)
     {
         MyRender11.RC.SetBlendState(MyBlendStateManager.BlendReplaceNoAlphaChannel);
 
         MyRender11.RC.SetInputLayout(null);
-        MyRender11.RC.PixelShader.Set(MyCopyToRT.CopyPs);
+        MyRender11.RC.PixelShader.Set(stretch ? MyCopyToRT.m_stretchPs : MyCopyToRT.CopyPs);
 
         MyRender11.RC.SetRtv(destination);
         MyRender11.RC.SetDepthStencilState(MyDepthStencilStateManager.IgnoreDepthStencil);
