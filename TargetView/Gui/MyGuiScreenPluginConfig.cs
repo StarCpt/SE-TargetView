@@ -48,7 +48,7 @@ namespace TargetView.Gui
             MyInput.Static.GetPressedKeys(_currentKeys);
             foreach (MyKeys key in _currentKeys)
             {
-                if (MyInput.Static.IsNewKeyPressed(key) && MyInput.Static.IsKeyValid(key) && Key != key)
+                if (MyInput.Static.IsNewKeyPressed(key) && MyInput.Static.IsKeyValid(key))
                 {
                     SetKey(key);
                     return;
@@ -61,6 +61,7 @@ namespace TargetView.Gui
             Key = key;
             _onKeyChanged?.Invoke(key);
             Control.Text = _listening ? $"{Key} (Recording)" : Key.ToString();
+            Recording = false;
         }
     }
 
