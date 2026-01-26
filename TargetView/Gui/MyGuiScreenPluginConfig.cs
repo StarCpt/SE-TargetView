@@ -12,59 +12,6 @@ using VRageRender;
 
 namespace TargetView.Gui
 {
-    public class KeyBindingHandler
-    {
-        public MyKeys Key { get; private set; }
-        public bool Recording
-        {
-            get => _listening;
-            set
-            {
-                _listening = value;
-                Control.Text = _listening ? $"{Key} (Recording)" : Key.ToString();
-            }
-        }
-        public readonly MyGuiControlButton Control;
-        private readonly Action<MyKeys> _onKeyChanged;
-
-        private readonly List<MyKeys> _currentKeys = [];
-        private bool _listening = false;
-
-        public KeyBindingHandler(MyKeys initialKey, MyGuiControlButton control, Action<MyKeys> onKeyChanged)
-        {
-            Key = initialKey;
-            Control = control;
-            _onKeyChanged = onKeyChanged;
-
-            SetKey(initialKey);
-        }
-
-        public void HandleInput()
-        {
-            if (!Recording)
-                return;
-
-            _currentKeys.Clear();
-            MyInput.Static.GetPressedKeys(_currentKeys);
-            foreach (MyKeys key in _currentKeys)
-            {
-                if (MyInput.Static.IsNewKeyPressed(key) && MyInput.Static.IsKeyValid(key))
-                {
-                    SetKey(key);
-                    return;
-                }
-            }
-        }
-
-        public void SetKey(MyKeys key)
-        {
-            Key = key;
-            _onKeyChanged?.Invoke(key);
-            Control.Text = _listening ? $"{Key} (Recording)" : Key.ToString();
-            Recording = false;
-        }
-    }
-
     public class MyGuiScreenPluginConfig : MyGuiScreenBase
     {
         private event Action OnHandleInput = delegate { };
@@ -74,14 +21,14 @@ namespace TargetView.Gui
 
         private static readonly Vector2I _minSize = new Vector2I(50, 50);
 
-        public MyGuiScreenPluginConfig() : base(new Vector2(0.5f, 0.5f), MyGuiConstants.SCREEN_BACKGROUND_COLOR, new Vector2(0.47f, 0.6f), false, null, MySandboxGame.Config.UIBkOpacity, MySandboxGame.Config.UIOpacity)
+        public MyGuiScreenPluginConfig() : base(new Vector2(0.5f, 0.5f), MyGuiConstants.SCREEN_BACKGROUND_COLOR, new Vector2(0.47f, 0.7f), false, null, MySandboxGame.Config.UIBkOpacity, MySandboxGame.Config.UIOpacity)
         {
             EnabledBackgroundFade = true;
             CloseButtonEnabled = true;
             screenRes = MyRender11.BackBufferResolution;
         }
 
-        public override string GetFriendlyName() => GetType().FullName;
+        public override string GetFriendlyName() => GetType().FullName!;
 
         public override void LoadContent()
         {
@@ -98,7 +45,7 @@ namespace TargetView.Gui
             pos.Y += (caption.Size.Y / 2) + space;
 
             MyGuiControlSeparatorList seperators = new MyGuiControlSeparatorList();
-            float sepWidth = Size.Value.X * 0.8f;
+            float sepWidth = Size!.Value.X * 0.8f;
             seperators.AddHorizontal(pos - new Vector2(sepWidth / 2, 0), sepWidth);
             Controls.Add(seperators);
             pos.Y += space;
@@ -165,21 +112,49 @@ namespace TargetView.Gui
             pos.X = 0;
             pos.Y += 0.02f;
 
+            // border
+            {
+                MyGuiControlColor borderColorPicker = new MyGuiControlColor("", 1, pos, settings.BorderColor, Color.White, MyStringId.NullOrEmpty)
+                {
+                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_CENTER_AND_VERTICAL_TOP,
+                };
+                borderColorPicker.OnChange += BorderColorPicker_OnChange;
+                AddControl(borderColorPicker);
+                AddControl(new MyGuiControlLabel(new Vector2(pos.X - borderColorPicker.Size.X * 0.5f, pos.Y - 0.005f), text: "Border Color", textScale: 0.8f, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP));
+                pos.Y += borderColorPicker.Size.Y + space;
+                pos.Y -= 0.02f;
+
+                MyGuiControlSlider borderThicknessSlider = new MyGuiControlSlider(pos with { X = ratioSlider.PositionX }, 0, 20, 0.2f, settings.BorderThickness, intValue: true, showLabel: true, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
+                borderThicknessSlider.CustomLabelText = false;
+                borderThicknessSlider.ValueChanged += slider =>
+                {
+                    Plugin.Settings.BorderThickness = (int)slider.Value;
+                };
+                AddControl(borderThicknessSlider);
+                AddCustomSliderLabel(borderThicknessSlider, val => val.ToString("0 px"));
+                AddCaption(borderThicknessSlider, "Border Thickness");
+                pos.Y += borderThicknessSlider.Size.Y + space;
+            }
+
+            pos.Y += 0.01f;
+
             MyGuiControlTextbox minDistTextBox = AddIntTextBox("Min Distance", pos, 0.1f, settings.MinDistance, 0, 100000, val => settings.MinDistance = val);
             pos.Y += minDistTextBox.Size.Y + space;
 
-            pos.Y += 0.02f;
-            var caption2 = AddCaption("Zoom Hotkey");
-            caption2.PositionY = pos.Y;
-            pos.Y += caption2.Size.Y;
-
-            MyGuiControlButton hotKeyButton = AddKeyboardKeyBindingButton(pos, Plugin.Settings.ZoomKey, key => Plugin.Settings.ZoomKey = key, MyGuiDrawAlignEnum.HORISONTAL_CENTER_AND_VERTICAL_TOP);
+            pos.Y += 0.01f;
+            MyGuiControlButton hotKeyButton = AddKeyboardKeyBindingButton(pos, Plugin.Settings.ZoomKey, key => Plugin.Settings.ZoomKey = key, MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
+            AddCaption(hotKeyButton, "Zoom Hotkey", -0.003f);
             pos.Y += hotKeyButton.Size.Y + space;
 
             // Bottom
             pos = new Vector2(0, (m_size!.Value.Y / 2) - space);
             MyGuiControlButton closeButton = new MyGuiControlButton(pos, text: MyTexts.Get(MyCommonTexts.Close), originAlign: MyGuiDrawAlignEnum.HORISONTAL_CENTER_AND_VERTICAL_BOTTOM, onButtonClick: OnCloseClicked);
             Controls.Add(closeButton);
+        }
+
+        private void BorderColorPicker_OnChange(MyGuiControlColor control)
+        {
+            Plugin.Settings.BorderColor = control.Color;
         }
 
         public override void HandleInput(bool receivedFocusInThisUpdate)
@@ -230,9 +205,9 @@ namespace TargetView.Gui
             return button;
         }
 
-        private void AddCaption(MyGuiControlBase control, string caption)
+        private void AddCaption(MyGuiControlBase control, string caption, float yOffset = 0)
         {
-            Controls.Add(new MyGuiControlLabel(control.Position + new Vector2(-space, control.Size.Y / 2), text: caption, originAlign: MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER));
+            Controls.Add(new MyGuiControlLabel(control.Position + new Vector2(-space, control.Size.Y / 2 + yOffset), text: caption, originAlign: MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER));
         }
 
         private void AddCustomSliderLabel(MyGuiControlSlider slider, Func<float, string> valueToTextFunc)

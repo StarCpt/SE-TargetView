@@ -142,13 +142,24 @@ public static class TargetViewRenderer
             MyBillboardRenderer.RenderPostPP(RC, MyGBuffer.Main.ResolvedDepthStencil.SrvDepth, postprocessResult.SRgb);
         }
 
-        RC.ClearRtv(renderTarget, new RawColor4(1, 1, 1, 1)); // clear with white background for border - janky but fast!
-        if (drawBorder && MyRender11.ViewportResolution.X > 2 && MyRender11.ViewportResolution.Y > 2)
+        int borderThickness = Plugin.Settings.BorderThickness;
+        if (drawBorder)
         {
-            CopyReplaceNoAlpha(postprocessResult.SRgb, renderTarget, false, Vector2I.One, MyRender11.ViewportResolution - 2);
+            Vector3 borderColor = Plugin.Settings.BorderColor.ToVector3();
+            RC.ClearRtv(renderTarget, new RawColor4(borderColor.X, borderColor.Y, borderColor.Z, 1)); // clear with border color - janky but fast!
+
+            if (MyRender11.ViewportResolution.X > (borderThickness * 2) && MyRender11.ViewportResolution.Y > (borderThickness * 2))
+            {
+                CopyReplaceNoAlpha(postprocessResult.SRgb, renderTarget, false, new Vector2I(borderThickness), MyRender11.ViewportResolution - (borderThickness * 2));
+            }
+            else
+            {
+                // the border covers the entire viewport
+            }
         }
         else
         {
+            RC.ClearRtv(renderTarget, new RawColor4(0, 0, 0, 1));
             CopyReplaceNoAlpha(postprocessResult.SRgb, renderTarget, false, Vector2I.Zero, MyRender11.ViewportResolution);
         }
 
