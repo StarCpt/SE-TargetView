@@ -94,6 +94,9 @@ public static class TargetViewManager
 
     private struct ControlledEntityData
     {
+        public readonly Vector3D Position => BoundingSphere.Center;
+        public readonly double Radius => BoundingSphere.Radius;
+
         public uint ControlledCockpitRenderId;
         public BoundingSphereD BoundingSphere;
         public Vector3D UpVector;
@@ -101,8 +104,13 @@ public static class TargetViewManager
 
     private struct TargetData
     {
+        public readonly Vector3D Position => BoundingSphere.Center;
+        public readonly double Radius => BoundingSphere.Radius;
+
         public BoundingSphereD BoundingSphere;
     }
+
+    private static TargetViewSettings Settings => Plugin.Settings;
 
     private static ControlledEntityData? _controlled = null;
     private static TargetData? _target = null;
@@ -132,7 +140,7 @@ public static class TargetViewManager
                 _controlled = new ControlledEntityData
                 {
                     ControlledCockpitRenderId = controlledCockpit.Render?.GetRenderObjectID() ?? uint.MaxValue,
-                    BoundingSphere = controlledGrid.PositionComp.WorldVolume with { Center = controlledGrid.PositionComp.WorldAABB.Center },
+                    BoundingSphere = controlledGrid.PositionComp.WorldVolume,
                     UpVector = controlledGrid.PositionComp.WorldMatrixRef.Up,
                 };
             }
@@ -212,15 +220,14 @@ public static class TargetViewManager
         };
         var originalCameraState = CameraState.From(MyRender11.Environment.Matrices);
 
-        Vector3D targetPos = target.BoundingSphere.Center;
-        Vector3D targetDir = Vector3D.Normalize(targetPos - controlledEntity.BoundingSphere.Center);
-        Vector3D cameraPos = controlledEntity.BoundingSphere.Center + (targetDir * controlledEntity.BoundingSphere.Radius);
+        Vector3D targetPos = target.Position;
+        Vector3D targetDir = Vector3D.Normalize(targetPos - controlledEntity.Position);
+        Vector3D cameraPos = controlledEntity.Position + (targetDir * controlledEntity.Radius);
 
         double targetDist = Vector3D.Distance(targetPos, cameraPos);
         double fov = 2 * Math.Atan2(target.BoundingSphere.Radius, targetDist);
 
-        if (targetDist < (controlledEntity.BoundingSphere.Radius + target.BoundingSphere.Radius) ||
-            targetDist > renderCamera.FarPlaneDistance)
+        if (targetDist < Math.Max(Settings.MinDistance, controlledEntity.Radius + target.Radius) || targetDist > renderCamera.FarPlaneDistance)
             return false;
 
         Vector2I backbufferRes = MyRender11.BackBufferResolution;
@@ -228,8 +235,8 @@ public static class TargetViewManager
         Vector2I zoomedPos = new Vector2I(20);
         Vector2I zoomedSize = new Vector2I(backbufferRes - (zoomedPos * 2));
 
-        Vector2I viewportPos = Utils.Lerp(Plugin.Settings.Position, zoomedPos, smoothZoomAmount);
-        Vector2I viewportRes = Utils.Lerp(Plugin.Settings.Size, zoomedSize, smoothZoomAmount);
+        Vector2I viewportPos = Utils.Lerp(Settings.Position, zoomedPos, smoothZoomAmount);
+        Vector2I viewportRes = Utils.Lerp(Settings.Size, zoomedSize, smoothZoomAmount);
 
         bool invalidPos = viewportPos.X >= backbufferRes.X || viewportPos.Y >= backbufferRes.Y;
         bool invalidRes = viewportRes.X < 20 || viewportRes.Y < 20 || viewportRes.X > backbufferRes.X || viewportRes.Y > backbufferRes.Y;

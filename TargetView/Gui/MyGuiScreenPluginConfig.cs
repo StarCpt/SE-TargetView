@@ -166,6 +166,11 @@ namespace TargetView.Gui
             pos.X = 0;
             pos.Y += 0.02f;
 
+            MyGuiControlTextbox minDistTextBox = AddIntTextBox("Min Distance", pos, 0.1f,
+                settings.MinDistance, 0, 100000, val => settings.MinDistance = val);
+            pos.Y += minDistTextBox.Size.Y + space;
+
+            pos.Y += 0.02f;
             var caption2 = AddCaption("Zoom Hotkey");
             caption2.PositionY = pos.Y;
             pos.Y += caption2.Size.Y;

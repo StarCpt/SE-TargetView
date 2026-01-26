@@ -21,6 +21,8 @@ namespace TargetView
         public bool HeadFix { get; set; } = true;
         public bool OcclusionFix { get; set; } = true;
 
+        public int MinDistance { get; set; } = 100;
+
         public Vector2I Position { get; set; } = new Vector2I(0, 0);
         public Vector2I Size { get; set; } = new Vector2I(500, 500);
         public MyKeys ZoomKey { get; set; } = MyKeys.M;
