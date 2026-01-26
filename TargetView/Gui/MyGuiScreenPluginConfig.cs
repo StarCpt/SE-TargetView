@@ -80,15 +80,13 @@ namespace TargetView.Gui
             screenRes = MyRender11.BackBufferResolution;
         }
 
-        public override string GetFriendlyName() => GetType().Name;
+        public override string GetFriendlyName() => GetType().FullName;
 
         public override void LoadContent()
         {
             base.LoadContent();
             RecreateControls(false);
         }
-
-        private KeyBindingHandler _hotKeyData;
 
         public override void RecreateControls(bool constructor)
         {
@@ -147,7 +145,7 @@ namespace TargetView.Gui
 
                 MyGuiControlTextbox sizeXTextBox = AddIntTextBox(
                     "Width", pos with { X = 0.06f }, TEXTBOX_WIDTH,
-                    settings.Size.X, 0, resolution.X,
+                    settings.Size.X, _minSize.X, resolution.X,
                     val => settings.Size = settings.Size with { X = val });
                 pos.Y += sizeXTextBox.Size.Y + space;
 
@@ -158,7 +156,7 @@ namespace TargetView.Gui
 
                 MyGuiControlTextbox sizeYTextBox = AddIntTextBox(
                     "Height", pos with { X = 0.06f }, TEXTBOX_WIDTH,
-                    settings.Size.Y, 0, resolution.Y,
+                    settings.Size.Y, _minSize.Y, resolution.Y,
                     val => settings.Size = settings.Size with { Y = val });
                 pos.Y += sizeYTextBox.Size.Y + space;
             }
@@ -166,8 +164,7 @@ namespace TargetView.Gui
             pos.X = 0;
             pos.Y += 0.02f;
 
-            MyGuiControlTextbox minDistTextBox = AddIntTextBox("Min Distance", pos, 0.1f,
-                settings.MinDistance, 0, 100000, val => settings.MinDistance = val);
+            MyGuiControlTextbox minDistTextBox = AddIntTextBox("Min Distance", pos, 0.1f, settings.MinDistance, 0, 100000, val => settings.MinDistance = val);
             pos.Y += minDistTextBox.Size.Y + space;
 
             pos.Y += 0.02f;
@@ -191,16 +188,6 @@ namespace TargetView.Gui
             OnHandleInput?.Invoke();
         }
 
-        private void HotKeyButton_ButtonClicked(MyGuiControlButton obj)
-        {
-            _hotKeyData.Recording = !_hotKeyData.Recording;
-        }
-
-        private void HotKeyButton_SecondaryButtonClicked(MyGuiControlButton obj)
-        {
-            _hotKeyData.SetKey(MyKeys.None);
-        }
-        
         private MyGuiControlTextbox AddIntTextBox(string caption, Vector2 position, float width, int initialValue, int min, int max, Action<int> setter, MyGuiDrawAlignEnum originAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP)
         {
             MyGuiControlTextbox control = new MyGuiControlTextbox(position, initialValue.ToString(), max.ToString().Length + 1, type: MyGuiControlTextboxType.DigitsOnly, minNumericValue: min, maxNumericValue: max)
