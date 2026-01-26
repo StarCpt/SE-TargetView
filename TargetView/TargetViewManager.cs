@@ -256,14 +256,8 @@ public static class TargetViewManager
         if (invalidPos || invalidRes)
             return false;
 
-        double fov = 2 * Math.Atan2(target.BoundingSphere.Radius, targetDist);
-
-        // if height > width, change fov to fit width
-        if (viewportRes.Y > viewportRes.X)
-        {
-            double aspectRatio = (double)viewportRes.X / (double)viewportRes.Y;
-            fov /= aspectRatio;
-        }
+        double aspectRatio = (double)viewportRes.X / (double)viewportRes.Y;
+        double fov = 2 * Math.Atan2(target.BoundingSphere.Radius / MathHelper.Saturate(aspectRatio), targetDist);
 
         {
             var tempRtv = MyManagers.RwTexturesPool.BorrowRtv("TargetViewRtv", backbufferRes.X, backbufferRes.Y, rtvFormat);

@@ -166,7 +166,7 @@ namespace TargetView.Gui
 
         private MyGuiControlTextbox AddIntTextBox(string caption, Vector2 position, float width, int initialValue, int min, int max, Action<int> setter, MyGuiDrawAlignEnum originAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP)
         {
-            MyGuiControlTextbox control = new MyGuiControlTextbox(position, initialValue.ToString(), max.ToString().Length + 1, type: MyGuiControlTextboxType.DigitsOnly, minNumericValue: min, maxNumericValue: max)
+            MyGuiControlTextbox control = new MyGuiControlTextbox(position, initialValue.ToString(), max.ToString().Length + 1, type: MyGuiControlTextboxType.DigitsOnly, minNumericValue: 0, maxNumericValue: max)
             {
                 Size = new Vector2(width, 0), // y doesn't do anything
                 OriginAlign = originAlign,
