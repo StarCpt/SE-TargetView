@@ -58,14 +58,6 @@ namespace TargetView.Gui
 
             pos.X -= 0.06f;
 
-            MyGuiControlSlider ratioSlider = new MyGuiControlSlider(pos, 1, 30, 0.2f, settings.Ratio, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP, intValue: true);
-            ratioSlider.SetToolTip("Render camera view every nth frame.");
-            ratioSlider.ValueChanged += RenderRatioChanged;
-            Controls.Add(ratioSlider);
-            AddCaption(ratioSlider, "Render ratio");
-            AddCustomSliderLabel(ratioSlider, val => $"{val}x");
-            pos.Y += ratioSlider.Size.Y + space;
-
             //MyGuiControlCheckbox headFixCheckbox = new MyGuiControlCheckbox(pos, isChecked: settings.HeadFix, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
             //headFixCheckbox.SetToolTip("Fix invisible character head on camera lcd in 1st person view.\nMay cause issues with modded characters.");
             //headFixCheckbox.IsCheckedChanged += IsHeadfixCheckedChanged;
@@ -124,7 +116,7 @@ namespace TargetView.Gui
                 pos.Y += borderColorPicker.Size.Y + space;
                 pos.Y -= 0.02f;
 
-                MyGuiControlSlider borderThicknessSlider = new MyGuiControlSlider(pos with { X = ratioSlider.PositionX }, 0, 20, 0.2f, settings.BorderThickness, intValue: true, showLabel: true, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
+                MyGuiControlSlider borderThicknessSlider = new MyGuiControlSlider(pos with { X = -0.06f }, 0, 20, 0.2f, settings.BorderThickness, intValue: true, showLabel: true, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
                 borderThicknessSlider.CustomLabelText = false;
                 borderThicknessSlider.ValueChanged += slider =>
                 {
@@ -233,7 +225,6 @@ namespace TargetView.Gui
         }
 
         void IsEnabledCheckedChanged(MyGuiControlCheckbox cb) => Plugin.Settings.Enabled = cb.IsChecked;
-        void RenderRatioChanged(MyGuiControlSlider slider) => Plugin.Settings.Ratio = (int)slider.Value;
         void IsHeadfixCheckedChanged(MyGuiControlCheckbox cb) => Plugin.Settings.HeadFix = cb.IsChecked;
         void IsOcclusionfixCheckedChanged(MyGuiControlCheckbox cb) => Plugin.Settings.OcclusionFix = cb.IsChecked;
     }

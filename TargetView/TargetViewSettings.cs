@@ -17,7 +17,6 @@ namespace TargetView
         }
 
         public bool Enabled { get; set; } = true;
-        public int Ratio { get; set; } = 1;
         public bool HeadFix { get; set; } = true;
         public bool OcclusionFix { get; set; } = true;
 
