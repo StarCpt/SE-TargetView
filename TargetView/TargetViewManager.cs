@@ -204,8 +204,6 @@ public static class TargetViewManager
             zoomAmount = _zoomAmount;
         }
 
-        float smoothZoomAmount = MathHelper.Saturate(_zoom ? Utils.CubicEaseOut(zoomAmount) : Utils.CubicEaseIn(zoomAmount));
-
         var originalRendererState = new RendererState
         {
             Lodding = MyCommon.LoddingSettings.Global.IsUpdateEnabled,
@@ -225,7 +223,6 @@ public static class TargetViewManager
         Vector3D cameraPos = controlledEntity.Position + (targetDir * controlledEntity.Radius);
 
         double targetDist = Vector3D.Distance(targetPos, cameraPos);
-        double fov = 2 * Math.Atan2(target.BoundingSphere.Radius, targetDist);
 
         if (targetDist < Math.Max(Settings.MinDistance, controlledEntity.Radius + target.Radius) || targetDist > renderCamera.FarPlaneDistance)
             return false;
@@ -235,14 +232,24 @@ public static class TargetViewManager
         Vector2I zoomedPos = new Vector2I(20);
         Vector2I zoomedSize = new Vector2I(backbufferRes - (zoomedPos * 2));
 
+        float smoothZoomAmount = MathHelper.Saturate(_zoom ? Utils.CubicEaseOut(zoomAmount) : Utils.CubicEaseIn(zoomAmount));
         Vector2I viewportPos = Utils.Lerp(Settings.Position, zoomedPos, smoothZoomAmount);
         Vector2I viewportRes = Utils.Lerp(Settings.Size, zoomedSize, smoothZoomAmount);
 
         bool invalidPos = viewportPos.X >= backbufferRes.X || viewportPos.Y >= backbufferRes.Y;
-        bool invalidRes = viewportRes.X < 20 || viewportRes.Y < 20 || viewportRes.X > backbufferRes.X || viewportRes.Y > backbufferRes.Y;
+        bool invalidRes = viewportRes.X < 20 || viewportRes.Y < 20 || viewportRes.X > backbufferRes.X || viewportRes.Y > backbufferRes.Y; // game may crash when viewport is too small
 
         if (invalidPos || invalidRes)
             return false;
+
+        double fov = 2 * Math.Atan2(target.BoundingSphere.Radius, targetDist);
+
+        // if height > width, change fov to fit width
+        if (viewportRes.Y > viewportRes.X)
+        {
+            double aspectRatio = (double)viewportRes.X / (double)viewportRes.Y;
+            fov /= aspectRatio;
+        }
 
         {
             var tempRtv = MyManagers.RwTexturesPool.BorrowRtv("TargetViewRtv", backbufferRes.X, backbufferRes.Y, rtvFormat);
