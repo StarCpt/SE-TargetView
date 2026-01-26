@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<PluginData xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="GitHubPlugin">
+
+  <Id>StarCpt/SE-TargetView</Id>
+  <Author>StarCpt</Author>
+  <FriendlyName>Target View</FriendlyName>
+  <Tooltip>Shows the locked target in a picture-in-picture screen.</Tooltip>
+
+  <Commit>dev folder use only</Commit>
+
+  <Description>Shows the currently locked target in a configurable ingame picture-in-picture screen.</Description>
+
+</PluginData>
