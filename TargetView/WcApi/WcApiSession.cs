@@ -11,6 +11,8 @@ namespace TargetView.WcApi;
 [MySessionComponentDescriptor(MyUpdateOrder.NoUpdate)]
 internal class WcApiSession : MySessionComponentBase
 {
+    public static bool ApiReady => _apiReady;
+
     private static CoreSystems.Api.WcApi? _api;
     private static bool _apiReady;
 

@@ -1,5 +1,6 @@
 ﻿using Sandbox;
 using Sandbox.Game.Entities;
+using Sandbox.Game.EntityComponents;
 using Sandbox.Game.World;
 using Sandbox.ModAPI;
 using SharpDX.DXGI;
@@ -127,7 +128,20 @@ public static class TargetViewManager
         MyCockpit? controlledCockpit = MySession.Static.LocalCharacter?.Parent as MyCockpit;
         MyCubeGrid? controlledGrid = controlledCockpit?.CubeGrid;
 
-        MyCubeGrid? target = WcApiSession.GetLockedTarget(controlledCockpit)?.GetTopMostParent(typeof(MyCubeGrid)) as MyCubeGrid;
+        MyCubeGrid? target = null;
+
+        bool isWc = WcApiSession.ApiReady;
+        if (isWc)
+        {
+            target = WcApiSession.GetLockedTarget(controlledCockpit)?.GetTopMostParent(typeof(MyCubeGrid)) as MyCubeGrid;
+        }
+        else if (controlledCockpit?.TargetData is { IsTargetLocked: true} targetData &&
+            MyEntities.TryGetEntityById(targetData.TargetId, out var lockedEntity, false) &&
+            controlledGrid?.Components.Get<MyGridTargeting>() is MyGridTargeting gridTargeting &&
+            gridTargeting.IsTargetLocked(lockedEntity))
+        {
+            target = lockedEntity.GetTopMostParent(typeof(MyCubeGrid)) as MyCubeGrid;
+        }
 
         lock (_sync)
         {
