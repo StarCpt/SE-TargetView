@@ -12,8 +12,62 @@ using VRageRender;
 
 namespace TargetView.Gui
 {
+    public class KeyBindingHandler
+    {
+        public MyKeys Key { get; private set; }
+        public bool Recording
+        {
+            get => _listening;
+            set
+            {
+                _listening = value;
+                Control.Text = _listening ? $"{Key} (Recording)" : Key.ToString();
+            }
+        }
+        public readonly MyGuiControlButton Control;
+        private readonly Action<MyKeys> _onKeyChanged;
+
+        private readonly List<MyKeys> _currentKeys = [];
+        private bool _listening = false;
+
+        public KeyBindingHandler(MyKeys initialKey, MyGuiControlButton control, Action<MyKeys> onKeyChanged)
+        {
+            Key = initialKey;
+            Control = control;
+            _onKeyChanged = onKeyChanged;
+
+            SetKey(initialKey);
+        }
+
+        public void HandleInput()
+        {
+            if (!Recording)
+                return;
+
+            _currentKeys.Clear();
+            MyInput.Static.GetPressedKeys(_currentKeys);
+            foreach (MyKeys key in _currentKeys)
+            {
+                if (MyInput.Static.IsNewKeyPressed(key) && MyInput.Static.IsKeyValid(key) && Key != key)
+                {
+                    SetKey(key);
+                    return;
+                }
+            }
+        }
+
+        public void SetKey(MyKeys key)
+        {
+            Key = key;
+            _onKeyChanged?.Invoke(key);
+            Control.Text = _listening ? $"{Key} (Recording)" : Key.ToString();
+        }
+    }
+
     public class MyGuiScreenPluginConfig : MyGuiScreenBase
     {
+        private event Action OnHandleInput = delegate { };
+
         private const float space = 0.01f;
         private Vector2I screenRes;
 
@@ -34,7 +88,7 @@ namespace TargetView.Gui
             RecreateControls(false);
         }
 
-        private ControlButtonData _hotKeyData;
+        private KeyBindingHandler _hotKeyData;
 
         public override void RecreateControls(bool constructor)
         {
@@ -66,8 +120,6 @@ namespace TargetView.Gui
             AddCustomSliderLabel(ratioSlider, val => $"{val}x");
             pos.Y += ratioSlider.Size.Y + space;
 
-            pos.Y += 0.02f;
-
             //MyGuiControlCheckbox headFixCheckbox = new MyGuiControlCheckbox(pos, isChecked: settings.HeadFix, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
             //headFixCheckbox.SetToolTip("Fix invisible character head on camera lcd in 1st person view.\nMay cause issues with modded characters.");
             //headFixCheckbox.IsCheckedChanged += IsHeadfixCheckedChanged;
@@ -82,60 +134,43 @@ namespace TargetView.Gui
             //AddCaption(occlusionFixCheckbox, "Occlusion fix");
             //pos.Y += occlusionFixCheckbox.Size.Y + space;
 
+            pos.Y += 0.02f;
+
             Vector2I resolution = screenRes;
             {
-                MyGuiControlTextbox posXTextBox = new MyGuiControlTextbox(pos with { X = -0.11f }, settings.Position.X.ToString(), 6, type: MyGuiControlTextboxType.DigitsOnly, minNumericValue: 0, maxNumericValue: resolution.X)
-                {
-                    Size = new Vector2(0.08f, 0),
-                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
-                };
-                posXTextBox.TextChanged += PosXTextBox_TextChanged;
-                AddControl(posXTextBox);
-                AddCaption(posXTextBox, "X Pos");
+                const float TEXTBOX_WIDTH = 0.08f;
 
-                MyGuiControlTextbox sizeXTextBox = new MyGuiControlTextbox(pos with { X = 0.06f }, settings.Size.X.ToString(), 6, type: MyGuiControlTextboxType.DigitsOnly, minNumericValue: 0, maxNumericValue: resolution.X)
-                {
-                    Size = new Vector2(0.08f, 0),
-                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
-                };
-                sizeXTextBox.TextChanged += SizeXTextBox_TextChanged;
-                AddControl(sizeXTextBox);
-                AddCaption(sizeXTextBox, "X Size");
+                MyGuiControlTextbox posXTextBox = AddIntTextBox(
+                    "X Pos", pos with { X = -0.11f }, TEXTBOX_WIDTH,
+                    settings.Position.X, 0, resolution.X,
+                    val => settings.Position = settings.Position with { X = val });
+
+                MyGuiControlTextbox sizeXTextBox = AddIntTextBox(
+                    "Width", pos with { X = 0.06f }, TEXTBOX_WIDTH,
+                    settings.Size.X, 0, resolution.X,
+                    val => settings.Size = settings.Size with { X = val });
                 pos.Y += sizeXTextBox.Size.Y + space;
 
-                MyGuiControlTextbox posYTextBox = new MyGuiControlTextbox(pos with { X = -0.11f }, settings.Position.Y.ToString(), 6, type: MyGuiControlTextboxType.DigitsOnly, minNumericValue: 0, maxNumericValue: resolution.Y)
-                {
-                    Size = new Vector2(0.08f, 0),
-                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
-                };
-                posYTextBox.TextChanged += PosYTextBox_TextChanged;
-                AddControl(posYTextBox);
-                AddCaption(posYTextBox, "Y Pos");
+                MyGuiControlTextbox posYTextBox = AddIntTextBox(
+                    "Y Pos", pos with { X = -0.11f }, TEXTBOX_WIDTH,
+                    settings.Position.Y, 0, resolution.Y,
+                    val => settings.Position = settings.Position with { Y = val });
 
-                MyGuiControlTextbox sizeYTextBox = new MyGuiControlTextbox(pos with { X = 0.06f }, settings.Size.Y.ToString(), 6, type: MyGuiControlTextboxType.DigitsOnly, minNumericValue: 0, maxNumericValue: resolution.Y)
-                {
-                    Size = new Vector2(0.08f, 0),
-                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
-                };
-                sizeYTextBox.TextChanged += SizeYTextBox_TextChanged;
-                AddControl(sizeYTextBox);
-                AddCaption(sizeYTextBox, "Y Size");
+                MyGuiControlTextbox sizeYTextBox = AddIntTextBox(
+                    "Height", pos with { X = 0.06f }, TEXTBOX_WIDTH,
+                    settings.Size.Y, 0, resolution.Y,
+                    val => settings.Size = settings.Size with { Y = val });
                 pos.Y += sizeYTextBox.Size.Y + space;
             }
 
+            pos.X = 0;
             pos.Y += 0.02f;
+
             var caption2 = AddCaption("Zoom Hotkey");
             caption2.PositionY = pos.Y;
             pos.Y += caption2.Size.Y;
 
-            MyGuiControlButton hotKeyButton = new MyGuiControlButton(pos, visualStyle: MyGuiControlButtonStyleEnum.ControlSetting, cueEnum: GuiSounds.MouseClick)
-            {
-                OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
-            };
-            hotKeyButton.UserData = _hotKeyData = new ControlButtonData(Plugin.Settings.ZoomKey, hotKeyButton, key => Plugin.Settings.ZoomKey = key);
-            hotKeyButton.ButtonClicked += HotKeyButton_ButtonClicked;
-            hotKeyButton.SecondaryButtonClicked += HotKeyButton_SecondaryButtonClicked;
-            AddControl(hotKeyButton);
+            MyGuiControlButton hotKeyButton = AddKeyboardKeyBindingButton(pos, Plugin.Settings.ZoomKey, key => Plugin.Settings.ZoomKey = key, MyGuiDrawAlignEnum.HORISONTAL_CENTER_AND_VERTICAL_TOP);
             pos.Y += hotKeyButton.Size.Y + space;
 
             // Bottom
@@ -148,90 +183,58 @@ namespace TargetView.Gui
         {
             base.HandleInput(receivedFocusInThisUpdate);
 
-            if (_hotKeyData.Control.HasFocus)
-            {
-                _hotKeyData.HandleInput();
-            }
-        }
-
-        class ControlButtonData
-        {
-            public MyKeys Key { get; private set; }
-            public readonly MyGuiControlButton Control;
-            private readonly Action<MyKeys> _onKeyChanged;
-
-            private readonly List<MyKeys> _currentKeys = [];
-
-            public ControlButtonData(MyKeys initialKey, MyGuiControlButton control, Action<MyKeys> onKeyChanged)
-            {
-                Key = initialKey;
-                Control = control;
-                _onKeyChanged = onKeyChanged;
-
-                SetKey(initialKey);
-            }
-
-            public void HandleInput()
-            {
-                _currentKeys.Clear();
-                MyInput.Static.GetPressedKeys(_currentKeys);
-                foreach (MyKeys key in _currentKeys)
-                {
-                    if (MyInput.Static.IsNewKeyPressed(key) && MyInput.Static.IsKeyValid(key) && Key != key)
-                    {
-                        SetKey(key);
-                        return;
-                    }
-                }
-            }
-
-            public void SetKey(MyKeys key)
-            {
-                Key = key;
-                _onKeyChanged?.Invoke(key);
-                Control.Text = Key.ToString();
-            }
+            OnHandleInput?.Invoke();
         }
 
         private void HotKeyButton_ButtonClicked(MyGuiControlButton obj)
         {
+            _hotKeyData.Recording = !_hotKeyData.Recording;
         }
 
         private void HotKeyButton_SecondaryButtonClicked(MyGuiControlButton obj)
         {
             _hotKeyData.SetKey(MyKeys.None);
         }
-
-        private void PosXTextBox_TextChanged(MyGuiControlTextbox box)
+        
+        private MyGuiControlTextbox AddIntTextBox(string caption, Vector2 position, float width, int initialValue, int min, int max, Action<int> setter, MyGuiDrawAlignEnum originAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP)
         {
-            if (int.TryParse(box.Text, out var result))
+            MyGuiControlTextbox control = new MyGuiControlTextbox(position, initialValue.ToString(), max.ToString().Length + 1, type: MyGuiControlTextboxType.DigitsOnly, minNumericValue: min, maxNumericValue: max)
             {
-                Plugin.Settings.Position = Plugin.Settings.Position with { X = MathHelper.Clamp(result, 0, screenRes.X) };
+                Size = new Vector2(width, 0), // y doesn't do anything
+                OriginAlign = originAlign,
+            };
+            control.TextChanged += OnTextChanged;
+            AddControl(control);
+            AddCaption(control, caption);
+            return control;
+
+            void OnTextChanged(MyGuiControlTextbox box)
+            {
+                if (int.TryParse(box.Text, out int val))
+                {
+                    val = MathHelper.Clamp(val, min, max);
+                    setter.Invoke(val);
+                }
             }
         }
 
-        private void PosYTextBox_TextChanged(MyGuiControlTextbox box)
+        private MyGuiControlButton AddKeyboardKeyBindingButton(Vector2 position, MyKeys initialValue, Action<MyKeys> setter, MyGuiDrawAlignEnum originAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP)
         {
-            if (int.TryParse(box.Text, out var result))
+            MyGuiControlButton button = new MyGuiControlButton(position, visualStyle: MyGuiControlButtonStyleEnum.ControlSetting, cueEnum: GuiSounds.MouseClick)
             {
-                Plugin.Settings.Position = Plugin.Settings.Position with { Y = MathHelper.Clamp(result, 0, screenRes.Y) };
-            }
-        }
+                OriginAlign = originAlign,
+            };
 
-        private void SizeXTextBox_TextChanged(MyGuiControlTextbox box)
-        {
-            if (int.TryParse(box.Text, out var result))
-            {
-                Plugin.Settings.Size = Plugin.Settings.Size with { X = MathHelper.Clamp(result, _minSize.X, screenRes.X) };
-            }
-        }
+            KeyBindingHandler handler = new KeyBindingHandler(initialValue, button, setter);
+            button.UserData = handler;
 
-        private void SizeYTextBox_TextChanged(MyGuiControlTextbox box)
-        {
-            if (int.TryParse(box.Text, out var result))
-            {
-                Plugin.Settings.Size = Plugin.Settings.Size with { Y = MathHelper.Clamp(result, _minSize.Y, screenRes.Y) };
-            }
+            OnHandleInput += handler.HandleInput;
+            button.ButtonClicked += _ => handler.Recording = !handler.Recording;
+            button.SecondaryButtonClicked += _ => handler.SetKey(MyKeys.None);
+
+            AddControl(button);
+            
+            return button;
         }
 
         private void AddCaption(MyGuiControlBase control, string caption)
