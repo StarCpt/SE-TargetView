@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using TargetView.Patches;
 using TargetView.WcApi;
 using VRage;
+using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.Entity;
 using VRage.Game.Utils;
@@ -21,6 +22,7 @@ using VRage.Input;
 using VRage.Render.Scene;
 using VRage.Render11.Common;
 using VRage.Render11.Resources;
+using VRage.Utils;
 using VRageMath;
 using VRageRender;
 using VRageRender.Messages;
@@ -98,7 +100,6 @@ public static class TargetViewManager
         public readonly Vector3D Position => BoundingSphere.Center;
         public readonly double Radius => BoundingSphere.Radius;
 
-        public uint ControlledCockpitRenderId;
         public BoundingSphereD BoundingSphere;
         public Vector3D UpVector;
     }
@@ -109,6 +110,7 @@ public static class TargetViewManager
         public readonly double Radius => BoundingSphere.Radius;
 
         public BoundingSphereD BoundingSphere;
+        public Vector3D? PainterPos;
     }
 
     private static TargetViewSettings Settings => Plugin.Settings;
@@ -129,11 +131,12 @@ public static class TargetViewManager
         MyCubeGrid? controlledGrid = controlledCockpit?.CubeGrid;
 
         MyCubeGrid? target = null;
+        Vector3D? targetPaintPos = null;
 
-        bool isWc = WcApiSession.ApiReady;
-        if (isWc)
+        if (WcApiSession.WcPresent)
         {
             target = WcApiSession.GetLockedTarget(controlledCockpit)?.GetTopMostParent(typeof(MyCubeGrid)) as MyCubeGrid;
+            targetPaintPos = WcApiSession.GetPainterPos();
         }
         else if (controlledCockpit?.TargetData is { IsTargetLocked: true} targetData &&
             MyEntities.TryGetEntityById(targetData.TargetId, out var lockedEntity, false) &&
@@ -143,9 +146,11 @@ public static class TargetViewManager
             target = lockedEntity.GetTopMostParent(typeof(MyCubeGrid)) as MyCubeGrid;
         }
 
+        bool newZoom = MyInput.Static.IsKeyPress(Plugin.Settings.ZoomKey);
+
         lock (_sync)
         {
-            if (controlledCockpit is null || controlledGrid?.PositionComp is null)
+            if (controlledGrid?.PositionComp is null)
             {
                 _controlled = null;
             }
@@ -153,7 +158,6 @@ public static class TargetViewManager
             {
                 _controlled = new ControlledEntityData
                 {
-                    ControlledCockpitRenderId = controlledCockpit.Render?.GetRenderObjectID() ?? uint.MaxValue,
                     BoundingSphere = controlledGrid.PositionComp.WorldVolume,
                     UpVector = controlledGrid.PositionComp.WorldMatrixRef.Up,
                 };
@@ -168,10 +172,10 @@ public static class TargetViewManager
                 _target = new TargetData
                 {
                     BoundingSphere = target.PositionComp.WorldVolume,
+                    PainterPos = targetPaintPos,
                 };
             }
 
-            bool newZoom = MyInput.Static.IsKeyPress(Plugin.Settings.ZoomKey);
             if (newZoom != _zoom)
             {
                 _zoomAmount = _zoom ? Utils.CubicEaseOut(_zoomAmount) : Utils.CubicEaseIn(_zoomAmount);
@@ -182,6 +186,57 @@ public static class TargetViewManager
 
     public static void HandleInput()
     {
+    }
+
+    private static readonly MyBillboard _paintIconBillboard = new()
+    {
+        BlendType = MyBillboard.BlendTypeEnum.PostPP,
+    };
+
+    private static void UpdatePaintIconBillboard(TargetData target, Vector3D cameraPos, MatrixD viewMatrix, MatrixD projMatrix, Vector2 viewportSize, double fov)
+    {
+        if (!target.PainterPos.HasValue)
+            return;
+
+        Vector3D targetPos = target.Position;
+        Vector3D targetDir = Vector3D.Normalize(targetPos - cameraPos);
+        MatrixD viewProjMatrix = viewMatrix * projMatrix;
+
+        float aspectRatio = viewportSize.X / viewportSize.Y;
+        double fovDistScale = Math.Tan(fov * 0.5) * 0.1;
+
+        Vector3D screenPos = Vector3D.Transform(target.PainterPos.Value, viewProjMatrix);
+
+        screenPos.X = Math.Round(screenPos.X * viewportSize.X * 0.5) / (viewportSize.X * 0.5);
+        screenPos.Y = Math.Round(screenPos.Y * viewportSize.Y * 0.5) / (viewportSize.Y * 0.5);
+
+        screenPos.X *= fovDistScale * aspectRatio;
+        screenPos.Y *= fovDistScale;
+        screenPos.Z = -0.1;
+
+        Vector3 billboardLeft = -viewMatrix.Col0;
+        Vector3 billboardUp = viewMatrix.Col1;
+
+        Vector3D billboardWorldPos = Vector3D.Transform(screenPos, MatrixD.CreateWorld(cameraPos, targetDir, (Vector3D)billboardUp));
+
+        if (MyTransparentMaterials.TryGetMaterial(MyStringId.GetOrCompute("BlockTargetAtlas"), out var mat))
+        {
+            int offsetIndex = MySession.Static.GameplayFrameCounter % 20;
+            offsetIndex = offsetIndex < 10 ? offsetIndex : 19 - offsetIndex;
+
+            Vector2 uvOffset = new Vector2(0, offsetIndex * 0.1f);
+            Vector2 uvSize = new Vector2(1, 0.1f);
+
+            Vector4 color = new Vector4(0.025f, 1, 0.25f, 2) * 1.25f;
+
+            float sizeInPx = 32;
+            float screenSize = sizeInPx / Math.Max(viewportSize.X, viewportSize.Y) * (float)fovDistScale;
+
+            MyUtils.GetBillboardQuadOriented(out MyQuadD quad, ref billboardWorldPos, screenSize, screenSize, ref billboardLeft, ref billboardUp);
+            MyTransparentGeometry.CreateBillboard(_paintIconBillboard, ref quad, mat.Id, ref color, ref billboardWorldPos);
+            _paintIconBillboard.UVOffset = uvOffset;
+            _paintIconBillboard.UVSize = uvSize;
+        }
     }
 
     /// <summary>
@@ -259,6 +314,22 @@ public static class TargetViewManager
         double aspectRatio = (double)viewportRes.X / (double)viewportRes.Y;
         double fov = 2 * Math.Atan2(target.BoundingSphere.Radius / MathHelper.Saturate(aspectRatio), targetDist);
 
+        double eps = 0.0000001;
+        double safeFovV = MathHelper.Clamp(2 * Math.Atan2(target.BoundingSphere.Radius, targetDist) * aspectRatio, eps, Math.PI - eps);
+        MatrixD projMatrix = MatrixD.CreatePerspectiveFieldOfView(safeFovV, aspectRatio, renderCamera.NearPlaneDistance, renderCamera.FarPlaneDistance);
+
+        MatrixD viewMatrix = GetViewMatrix(cameraPos, controlledEntity.UpVector, targetPos);
+
+        UpdatePaintIconBillboard(target, cameraPos, viewMatrix, projMatrix, viewportRes, safeFovV);
+
+        int paintIconBillboardIndex = -1;
+
+        if (target.PainterPos.HasValue)
+        {
+            paintIconBillboardIndex = MyRenderProxy.BillboardsRead.Count;
+            MyRenderProxy.BillboardsRead.Add(_paintIconBillboard);
+        }
+
         {
             var tempRtv = MyManagers.RwTexturesPool.BorrowRtv("TargetViewRtv", backbufferRes.X, backbufferRes.Y, rtvFormat);
 
@@ -266,7 +337,7 @@ public static class TargetViewManager
             SetRendererState(RendererState.GetCameraViewState(viewportRes));
             SetCameraViewMatrix(originalCameraState with
             {
-                ViewMatrix = GetViewMatrixAndPosition(cameraPos, controlledEntity.UpVector, targetPos),
+                ViewMatrix = viewMatrix,
                 Fov = (float)fov,
                 NearPlane = renderCamera.NearPlaneDistance,
                 FarPlane = renderCamera.FarPlaneDistance,
@@ -285,10 +356,15 @@ public static class TargetViewManager
             Patch_MyRender11.TargetViewViewport = new MyViewport(viewportPos.X, viewportPos.Y, viewportRes.X, viewportRes.Y);
         }
 
+        if (paintIconBillboardIndex != -1)
+        {
+            MyRenderProxy.BillboardsRead.RemoveAtFast(paintIconBillboardIndex);
+        }
+
         return true;
     }
 
-    private static MatrixD GetViewMatrixAndPosition(Vector3D cameraPos, Vector3D cameraUp, Vector3D targetPos)
+    private static MatrixD GetViewMatrix(Vector3D cameraPos, Vector3D cameraUp, Vector3D targetPos)
     {
         return MatrixD.CreateLookAt(cameraPos, targetPos, cameraUp);
     }
