@@ -90,16 +90,16 @@ internal class WcApiSession : MySessionComponentBase
         return Traverse.Create(_wcSessionType).Field("I").Field("Tick").GetValue<uint>();
     }
 
-    public static Vector3D? GetPainterPos()
+    public static Vector3D? GetLocalPainterPos()
     {
         if (TryGetPaintedTarget() is object paintedTarget)
         {
             long entityId = Traverse.Create(paintedTarget).Field("EntityId").GetValue<long>();
             Vector3D localPos = Traverse.Create(paintedTarget).Field("LocalPosition").GetValue<Vector3D>();
 
-            if (entityId != 0 && MyEntities.GetEntityById(entityId)?.GetTopMostParent(typeof(MyCubeGrid)) is MyCubeGrid paintedGrid && paintedGrid.PositionComp is not null)
+            if (entityId != 0)
             {
-                return Vector3D.Transform(localPos, paintedGrid.PositionComp.WorldMatrixRef);
+                return localPos;
             }
         }
 

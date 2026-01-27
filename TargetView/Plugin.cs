@@ -52,7 +52,13 @@ namespace TargetView
 
         public void HandleInput()
         {
-            TargetViewManager.HandleInput();
+            //if (!Settings.Enabled)
+            //    return;
+            //
+            //if (MySession.Static != null && MySession.Static.Ready)
+            //{
+            //    TargetViewManager.HandleInput();
+            //}
         }
 
         public void OpenConfigDialog()

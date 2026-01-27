@@ -103,7 +103,7 @@ public static class TargetViewManager
 
         public uint ActorId;
         public BoundingSphereD LocalVolume;
-        public Vector3D? PainterPos;
+        public Vector3D? LocalPainterPos;
     }
 
     private static TargetViewSettings Settings => Plugin.Settings;
@@ -127,12 +127,12 @@ public static class TargetViewManager
         MyCubeGrid? controlledGrid = controlledCockpit?.CubeGrid;
 
         MyCubeGrid? target = null;
-        Vector3D? targetPaintPos = null;
+        Vector3D? targetPaintPosLocal = null;
 
         if (WcApiSession.WcPresent)
         {
             target = WcApiSession.GetLockedTarget(controlledCockpit)?.GetTopMostParent(typeof(MyCubeGrid)) as MyCubeGrid;
-            targetPaintPos = WcApiSession.GetPainterPos();
+            targetPaintPosLocal = WcApiSession.GetLocalPainterPos();
         }
         else if (controlledCockpit?.TargetData is { IsTargetLocked: true} targetData &&
             MyEntities.TryGetEntityById(targetData.TargetId, out var lockedEntity, false) &&
@@ -173,7 +173,7 @@ public static class TargetViewManager
                 {
                     ActorId = target.Render?.GetRenderObjectID() ?? uint.MaxValue,
                     LocalVolume = target.PositionComp.LocalVolume,
-                    PainterPos = targetPaintPos,
+                    LocalPainterPos = targetPaintPosLocal,
                 };
                 _targetGrid = target;
             }
@@ -232,7 +232,7 @@ public static class TargetViewManager
 
                 RayD ray = default;
                 ray.Direction = Utils.ComputeWorldRay(_paintCursorUV, _lastViewMatrix, _lastProjMatrix);
-                ray.Position = cameraPos + ray.Direction * cameraNearplane;
+                ray.Position = cameraPos + -_lastViewMatrix.Col2 * cameraNearplane;
 
                 if (_targetGrid.PositionComp.WorldAABB.Intersect(ref ray, out double aabbHitNear, out double aabbHitFar))
                 {
@@ -335,8 +335,11 @@ public static class TargetViewManager
             zoomAmount = _zoomAmount;
         }
 
-        Vector3D controlledEntityPos, targetPos;
+        Vector3D controlledEntityPos;
         Vector3D cameraUp;
+
+        Vector3D targetPos;
+        Vector3D? targetPainterPos = null;
 
         if (!TryGetActor(controlledEntity.ActorId, out MyActor controlledGridActor))
         {
@@ -355,6 +358,11 @@ public static class TargetViewManager
         else
         {
             targetPos = Vector3D.Transform(target.LocalVolume.Center, targetGridActor.WorldMatrix);
+
+            if (target.LocalPainterPos.HasValue)
+            {
+                targetPainterPos = Vector3D.Transform(target.LocalPainterPos.Value, targetGridActor.WorldMatrix);
+            }
         }
 
         var originalRendererState = new RendererState
@@ -401,9 +409,9 @@ public static class TargetViewManager
         double eps = 0.0000001;
         double safeFovV = MathHelper.Clamp(2 * Math.Atan2(target.Radius, targetDist) * aspectRatio, eps, Math.PI - eps);
         MatrixD projMatrix = MatrixD.CreatePerspectiveFieldOfView(safeFovV, aspectRatio, renderCamera.NearPlaneDistance, renderCamera.FarPlaneDistance);
-        MatrixD viewMatrix = GetViewMatrix(cameraPos, cameraUp, targetPos);
+        MatrixD viewMatrix = MatrixD.CreateLookAt(cameraPos, targetPos, cameraUp);
 
-        UpdatePaintIconBillboard(target.PainterPos, targetPos, cameraPos, viewMatrix, projMatrix, viewportRes, safeFovV);
+        UpdatePaintIconBillboard(targetPainterPos, targetPos, cameraPos, viewMatrix, projMatrix, viewportRes, safeFovV);
 
         _lastViewport = new MyViewport(viewportPos.X, viewportPos.Y, viewportRes.X, viewportRes.Y);
         _lastViewMatrix = viewMatrix;
@@ -411,7 +419,7 @@ public static class TargetViewManager
 
         int paintIconBillboardIndex = -1;
 
-        if (target.PainterPos.HasValue)
+        if (targetPainterPos.HasValue)
         {
             paintIconBillboardIndex = MyRenderProxy.BillboardsRead.Count;
             MyRenderProxy.BillboardsRead.Add(_paintIconBillboard);
@@ -449,11 +457,6 @@ public static class TargetViewManager
         }
 
         return true;
-    }
-
-    private static MatrixD GetViewMatrix(Vector3D cameraPos, Vector3D cameraUp, Vector3D targetPos)
-    {
-        return MatrixD.CreateLookAt(cameraPos, targetPos, cameraUp);
     }
 
     private static void SetRendererState(RendererState state)
