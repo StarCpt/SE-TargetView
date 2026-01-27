@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using Sandbox.Game.Entities;
 using Sandbox.Game.World;
 using System;
 using System.Collections;
@@ -94,11 +95,11 @@ internal class WcApiSession : MySessionComponentBase
         if (TryGetPaintedTarget() is object paintedTarget)
         {
             long entityId = Traverse.Create(paintedTarget).Field("EntityId").GetValue<long>();
-            Vector3D worldPos = Traverse.Create(paintedTarget).Field("FakeInfo").Field("WorldPosition").GetValue<Vector3D>();
+            Vector3D localPos = Traverse.Create(paintedTarget).Field("LocalPosition").GetValue<Vector3D>();
 
-            if (entityId != 0)
+            if (entityId != 0 && MyEntities.GetEntityById(entityId)?.GetTopMostParent(typeof(MyCubeGrid)) is MyCubeGrid paintedGrid && paintedGrid.PositionComp is not null)
             {
-                return worldPos;
+                return Vector3D.Transform(localPos, paintedGrid.PositionComp.WorldMatrixRef);
             }
         }
 
