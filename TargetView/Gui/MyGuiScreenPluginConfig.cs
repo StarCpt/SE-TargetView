@@ -134,9 +134,13 @@ namespace TargetView.Gui
             pos.Y += minDistTextBox.Size.Y + space;
 
             pos.Y += 0.01f;
-            MyGuiControlButton hotKeyButton = AddKeyboardKeyBindingButton(pos, Plugin.Settings.ZoomKey, key => Plugin.Settings.ZoomKey = key, MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
-            AddCaption(hotKeyButton, "Zoom Hotkey", -0.003f);
-            pos.Y += hotKeyButton.Size.Y + space;
+            MyGuiControlButton zoomBindingButton = AddKeyboardKeyBindingButton(pos, Plugin.Settings.ZoomKey, key => Plugin.Settings.ZoomKey = key, MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
+            AddCaption(zoomBindingButton, "Zoom Key", -0.005f);
+            pos.Y += zoomBindingButton.Size.Y + space;
+
+            MyGuiControlButton painterBindingButton = AddKeyboardKeyBindingButton(pos, Plugin.Settings.PainterKey, key => Plugin.Settings.PainterKey = key, MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
+            AddCaption(painterBindingButton, "Painter Key", -0.005f);
+            pos.Y += painterBindingButton.Size.Y + space;
 
             // Bottom
             pos = new Vector2(0, (m_size!.Value.Y / 2) - space);

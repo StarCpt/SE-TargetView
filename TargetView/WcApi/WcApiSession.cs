@@ -2,13 +2,11 @@
 using Sandbox.Game.World;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using VRage.Game.Components;
 using VRage.Game.Entity;
+using VRage.Utils;
 using VRageMath;
 
 namespace TargetView.WcApi;
@@ -16,6 +14,12 @@ namespace TargetView.WcApi;
 [MySessionComponentDescriptor(MyUpdateOrder.NoUpdate)]
 internal class WcApiSession : MySessionComponentBase
 {
+    public static class Materials
+    {
+        public static readonly MyStringId TargetReticle = MyStringId.GetOrCompute("TargetReticle");
+        public static readonly MyStringId BlockTargetAtlas = MyStringId.GetOrCompute("BlockTargetAtlas");
+    }
+
     const string WC_SCRIPT_NAMESPACE = "CoreSystems";
 
     public static bool WcPresent => _apiReady || _wcSessionType != null;
@@ -58,7 +62,7 @@ internal class WcApiSession : MySessionComponentBase
         return target;
     }
 
-    public static Vector3D? GetPainterPos()
+    private static object? TryGetPaintedTarget()
     {
         if (_api is null || !_apiReady || _wcSessionType == null)
             return null;
@@ -72,6 +76,23 @@ internal class WcApiSession : MySessionComponentBase
         {
             // reference: https://github.com/Ash-LikeSnow/WeaponCore/blob/e4d01b9a4150974fc1bac7eec0c840aae73b28f3/Data/Scripts/CoreSystems/Ai/AiTypes.cs#L155-L182
             object paintedTarget = Traverse.Create(playerDummyTargets[playerId]).Field("PaintedTarget").GetValue();
+            return paintedTarget;
+        }
+        return null;
+    }
+
+    private static uint GetWcSessionTick()
+    {
+        if (_api is null || !_apiReady || _wcSessionType == null)
+            return 0;
+
+        return Traverse.Create(_wcSessionType).Field("I").Field("Tick").GetValue<uint>();
+    }
+
+    public static Vector3D? GetPainterPos()
+    {
+        if (TryGetPaintedTarget() is object paintedTarget)
+        {
             long entityId = Traverse.Create(paintedTarget).Field("EntityId").GetValue<long>();
             Vector3D worldPos = Traverse.Create(paintedTarget).Field("FakeInfo").Field("WorldPosition").GetValue<Vector3D>();
 
@@ -82,5 +103,24 @@ internal class WcApiSession : MySessionComponentBase
         }
 
         return null;
+    }
+
+    // Vector3D hitPos, uint tick, MyEntity ent = null, long entId = 0
+    private static readonly Type[] _painterUpdateParamTypes =
+    {
+        typeof(Vector3D), typeof(uint), typeof(MyEntity), typeof(long)
+    };
+    private static readonly object[] _painterUpdateArgs = new object[4];
+
+    public static void SetPainterPos(Vector3D worldPos, MyEntity targetEntity)
+    {
+        if (TryGetPaintedTarget() is object paintedTarget)
+        {
+            _painterUpdateArgs[0] = (Vector3D)worldPos;
+            _painterUpdateArgs[1] = (uint)GetWcSessionTick();
+            _painterUpdateArgs[2] = (MyEntity)targetEntity;
+            _painterUpdateArgs[3] = (long)0;
+            Traverse.Create(paintedTarget).Method("Update", _painterUpdateParamTypes, _painterUpdateArgs).GetValue();
+        }
     }
 }

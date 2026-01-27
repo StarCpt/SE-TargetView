@@ -1,27 +1,21 @@
-﻿using Sandbox;
-using Sandbox.Game.Entities;
+﻿using Sandbox.Game.Entities;
 using Sandbox.Game.EntityComponents;
 using Sandbox.Game.World;
-using Sandbox.ModAPI;
+using Sandbox.Graphics;
+using Sandbox.ModAPI.Physics;
 using SharpDX.DXGI;
-using SpaceEngineers.Game;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TargetView.Patches;
 using TargetView.WcApi;
-using VRage;
 using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.Entity;
+using VRage.Game.ModAPI;
 using VRage.Game.Utils;
 using VRage.Input;
 using VRage.Render.Scene;
 using VRage.Render11.Common;
-using VRage.Render11.Resources;
 using VRage.Utils;
 using VRageMath;
 using VRageRender;
@@ -122,6 +116,8 @@ public static class TargetViewManager
     private static bool _zoom = false;
     private static float _zoomAmount = 0; // 0 = no zoom, 1 = full zoom
 
+    private static MyCubeGrid? _targetGrid;
+
     /// <summary>
     /// Main thread only
     /// </summary>
@@ -145,6 +141,8 @@ public static class TargetViewManager
         {
             target = lockedEntity.GetTopMostParent(typeof(MyCubeGrid)) as MyCubeGrid;
         }
+
+        _targetGrid = target;
 
         bool newZoom = MyInput.Static.IsKeyPress(Plugin.Settings.ZoomKey);
 
@@ -184,8 +182,68 @@ public static class TargetViewManager
         }
     }
 
+    public static bool IsPainting { get; private set; } = false;
+    private static Vector2 _paintCursorUV = new Vector2(0.5f); // [0,1]
+
+    // render -> game
+    private static MyViewport _lastViewport = default;
+    private static MatrixD _lastViewMatrix = MatrixD.Identity;
+    private static MatrixD _lastProjMatrix = MatrixD.Identity;
+
     public static void HandleInput()
     {
+        if (!WcApiSession.WcPresent)
+            return;
+
+        if (!_controlled.HasValue || !_target.HasValue)
+            return;
+
+        IsPainting = Plugin.Settings.PainterKey != MyKeys.None && MyInput.Static.IsKeyPress(Plugin.Settings.PainterKey);
+        if (IsPainting && MyTransparentMaterials.TryGetMaterial(WcApiSession.Materials.TargetReticle, out var targetReticleMaterial))
+        {
+            // draw cursor
+            MyViewport targetViewport = _lastViewport;
+
+            Vector2 mouseDelta = MyInputExtensions.GetCursorPositionDelta(MyInput.Static) / new Vector2(targetViewport.Width, targetViewport.Height);
+            _paintCursorUV = _paintCursorUV.IsValid() ? Vector2.Clamp(_paintCursorUV + mouseDelta, Vector2.Zero, Vector2.One) : Vector2.Zero;
+
+            Rectangle screenRect = MyGuiManager.GetFullscreenRectangle();
+            Vector2I screenSize = new Vector2I(screenRect.Width, screenRect.Height);
+
+            Vector2 topLeft = new Vector2(targetViewport.OffsetX / screenSize.X, targetViewport.OffsetY / screenSize.Y);
+            Vector2 bottomRight = topLeft + new Vector2(targetViewport.Width / screenSize.X, targetViewport.Height / screenSize.Y);
+
+            Vector2 screenUV = new Vector2
+            {
+                X = MathHelper.Lerp(topLeft.X, bottomRight.X, _paintCursorUV.X),
+                Y = MathHelper.Lerp(topLeft.Y, bottomRight.Y, _paintCursorUV.Y),
+            };
+
+            Utils.DrawMouseCursor(targetReticleMaterial.Texture, screenUV, 32);
+
+            if (MyInput.Static.IsNewLeftMousePressed())
+            {
+                Vector3D cameraPos = _controlled.Value.Position;
+                double cameraNearplane = _controlled.Value.Radius;
+
+                RayD ray = default;
+                ray.Direction = Utils.ComputeWorldRay(_paintCursorUV, _lastViewMatrix, _lastProjMatrix);
+                ray.Position = cameraPos + ray.Direction * cameraNearplane;
+
+                if (_targetGrid!.PositionComp.WorldAABB.Intersect(ref ray, out double aabbHitNear, out double aabbHitFar))
+                {
+                    // fire ray from aabb hit
+                    Vector3D rayFrom = ray.Position + ray.Direction * aabbHitNear;
+                    Vector3D rayTo = ray.Position + ray.Direction * aabbHitFar;
+
+                    if (((IMyPhysics)MyPhysics.Static).CastRay(rayFrom, rayTo, out var hitInfo) &&
+                        hitInfo.HitEntity.GetTopMostParent(typeof(MyCubeGrid)) as MyCubeGrid == _targetGrid)
+                    {
+                        WcApiSession.SetPainterPos(hitInfo.Position, _targetGrid);
+                    }
+                }
+            }
+        }
     }
 
     private static readonly MyBillboard _paintIconBillboard = new()
@@ -198,6 +256,9 @@ public static class TargetViewManager
         if (!target.PainterPos.HasValue)
             return;
 
+        if (!MyTransparentMaterials.TryGetMaterial(WcApiSession.Materials.BlockTargetAtlas, out var mat))
+            return;
+
         Vector3D targetPos = target.Position;
         Vector3D targetDir = Vector3D.Normalize(targetPos - cameraPos);
         MatrixD viewProjMatrix = viewMatrix * projMatrix;
@@ -207,8 +268,9 @@ public static class TargetViewManager
 
         Vector3D screenPos = Vector3D.Transform(target.PainterPos.Value, viewProjMatrix);
 
-        screenPos.X = Math.Round(screenPos.X * viewportSize.X * 0.5) / (viewportSize.X * 0.5);
-        screenPos.Y = Math.Round(screenPos.Y * viewportSize.Y * 0.5) / (viewportSize.Y * 0.5);
+        // align to pixel
+        //screenPos.X = Math.Round(screenPos.X * viewportSize.X * 0.5) / (viewportSize.X * 0.5);
+        //screenPos.Y = Math.Round(screenPos.Y * viewportSize.Y * 0.5) / (viewportSize.Y * 0.5);
 
         screenPos.X *= fovDistScale * aspectRatio;
         screenPos.Y *= fovDistScale;
@@ -219,24 +281,21 @@ public static class TargetViewManager
 
         Vector3D billboardWorldPos = Vector3D.Transform(screenPos, MatrixD.CreateWorld(cameraPos, targetDir, (Vector3D)billboardUp));
 
-        if (MyTransparentMaterials.TryGetMaterial(MyStringId.GetOrCompute("BlockTargetAtlas"), out var mat))
-        {
-            int offsetIndex = MySession.Static.GameplayFrameCounter % 20;
-            offsetIndex = offsetIndex < 10 ? offsetIndex : 19 - offsetIndex;
+        int offsetIndex = MySession.Static.GameplayFrameCounter % 20;
+        offsetIndex = offsetIndex < 10 ? offsetIndex : 19 - offsetIndex;
 
-            Vector2 uvOffset = new Vector2(0, offsetIndex * 0.1f);
-            Vector2 uvSize = new Vector2(1, 0.1f);
+        Vector2 uvOffset = new Vector2(0, offsetIndex * 0.1f);
+        Vector2 uvSize = new Vector2(1, 0.1f);
 
-            Vector4 color = new Vector4(0.025f, 1, 0.25f, 2) * 1.25f;
+        Vector4 color = new Vector4(0.025f, 1, 0.25f, 2) * 1.25f;
 
-            float sizeInPx = 32;
-            float screenSize = sizeInPx / Math.Max(viewportSize.X, viewportSize.Y) * (float)fovDistScale;
+        float sizeInPx = 32;
+        float screenSize = sizeInPx / Math.Max(viewportSize.X, viewportSize.Y) * (float)fovDistScale;
 
-            MyUtils.GetBillboardQuadOriented(out MyQuadD quad, ref billboardWorldPos, screenSize, screenSize, ref billboardLeft, ref billboardUp);
-            MyTransparentGeometry.CreateBillboard(_paintIconBillboard, ref quad, mat.Id, ref color, ref billboardWorldPos);
-            _paintIconBillboard.UVOffset = uvOffset;
-            _paintIconBillboard.UVSize = uvSize;
-        }
+        MyUtils.GetBillboardQuadOriented(out MyQuadD quad, ref billboardWorldPos, screenSize, screenSize, ref billboardLeft, ref billboardUp);
+        MyTransparentGeometry.CreateBillboard(_paintIconBillboard, ref quad, mat.Id, ref color, ref billboardWorldPos);
+        _paintIconBillboard.UVOffset = uvOffset;
+        _paintIconBillboard.UVSize = uvSize;
     }
 
     /// <summary>
@@ -314,13 +373,17 @@ public static class TargetViewManager
         double aspectRatio = (double)viewportRes.X / (double)viewportRes.Y;
         double fov = 2 * Math.Atan2(target.BoundingSphere.Radius / MathHelper.Saturate(aspectRatio), targetDist);
 
+        // this "safe fov" thing is wrong but it works
         double eps = 0.0000001;
         double safeFovV = MathHelper.Clamp(2 * Math.Atan2(target.BoundingSphere.Radius, targetDist) * aspectRatio, eps, Math.PI - eps);
         MatrixD projMatrix = MatrixD.CreatePerspectiveFieldOfView(safeFovV, aspectRatio, renderCamera.NearPlaneDistance, renderCamera.FarPlaneDistance);
-
         MatrixD viewMatrix = GetViewMatrix(cameraPos, controlledEntity.UpVector, targetPos);
 
         UpdatePaintIconBillboard(target, cameraPos, viewMatrix, projMatrix, viewportRes, safeFovV);
+
+        _lastViewport = new MyViewport(viewportPos.X, viewportPos.Y, viewportRes.X, viewportRes.Y);
+        _lastViewMatrix = viewMatrix;
+        _lastProjMatrix = MatrixD.CreatePerspectiveFieldOfView(fov, aspectRatio, renderCamera.NearPlaneDistance, renderCamera.FarPlaneDistance);
 
         int paintIconBillboardIndex = -1;
 
