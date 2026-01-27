@@ -91,19 +91,18 @@ public static class TargetViewManager
 
     private struct ControlledEntityData
     {
-        public readonly Vector3D Position => BoundingSphere.Center;
-        public readonly double Radius => BoundingSphere.Radius;
+        public readonly double Radius => LocalVolume.Radius;
 
-        public BoundingSphereD BoundingSphere;
-        public Vector3D UpVector;
+        public uint ActorId;
+        public BoundingSphereD LocalVolume; // center is relative to grid pivot
     }
 
     private struct TargetData
     {
-        public readonly Vector3D Position => BoundingSphere.Center;
-        public readonly double Radius => BoundingSphere.Radius;
+        public readonly double Radius => LocalVolume.Radius;
 
-        public BoundingSphereD BoundingSphere;
+        public uint ActorId;
+        public BoundingSphereD LocalVolume;
         public Vector3D? PainterPos;
     }
 
@@ -116,6 +115,7 @@ public static class TargetViewManager
     private static bool _zoom = false;
     private static float _zoomAmount = 0; // 0 = no zoom, 1 = full zoom
 
+    private static MyCubeGrid? _controlledGrid;
     private static MyCubeGrid? _targetGrid;
 
     /// <summary>
@@ -142,7 +142,6 @@ public static class TargetViewManager
             target = lockedEntity.GetTopMostParent(typeof(MyCubeGrid)) as MyCubeGrid;
         }
 
-        _targetGrid = target;
 
         bool newZoom = MyInput.Static.IsKeyPress(Plugin.Settings.ZoomKey);
 
@@ -151,27 +150,32 @@ public static class TargetViewManager
             if (controlledGrid?.PositionComp is null)
             {
                 _controlled = null;
+                _controlledGrid = null;
             }
             else
             {
                 _controlled = new ControlledEntityData
                 {
-                    BoundingSphere = controlledGrid.PositionComp.WorldVolume,
-                    UpVector = controlledGrid.PositionComp.WorldMatrixRef.Up,
+                    ActorId = controlledGrid.Render?.GetRenderObjectID() ?? uint.MaxValue,
+                    LocalVolume = controlledGrid.PositionComp.LocalVolume,
                 };
+                _controlledGrid = controlledGrid;
             }
 
             if (target?.PositionComp is null)
             {
                 _target = null;
+                _targetGrid = null;
             }
             else
             {
                 _target = new TargetData
                 {
-                    BoundingSphere = target.PositionComp.WorldVolume,
+                    ActorId = target.Render?.GetRenderObjectID() ?? uint.MaxValue,
+                    LocalVolume = target.PositionComp.LocalVolume,
                     PainterPos = targetPaintPos,
                 };
+                _targetGrid = target;
             }
 
             if (newZoom != _zoom)
@@ -195,7 +199,7 @@ public static class TargetViewManager
         if (!WcApiSession.WcPresent)
             return;
 
-        if (!_controlled.HasValue || !_target.HasValue)
+        if (!_controlled.HasValue || !_target.HasValue || _controlledGrid is null || _targetGrid is null)
             return;
 
         IsPainting = Plugin.Settings.PainterKey != MyKeys.None && MyInput.Static.IsKeyPress(Plugin.Settings.PainterKey);
@@ -221,16 +225,16 @@ public static class TargetViewManager
 
             Utils.DrawMouseCursor(targetReticleMaterial.Texture, screenUV, 32);
 
-            if (MyInput.Static.IsNewLeftMousePressed())
+            if (MyInput.Static.IsNewLeftMousePressed() && _controlledGrid.PositionComp != null)
             {
-                Vector3D cameraPos = _controlled.Value.Position;
+                Vector3D cameraPos = _controlledGrid.PositionComp.WorldAABB.Center;
                 double cameraNearplane = _controlled.Value.Radius;
 
                 RayD ray = default;
                 ray.Direction = Utils.ComputeWorldRay(_paintCursorUV, _lastViewMatrix, _lastProjMatrix);
                 ray.Position = cameraPos + ray.Direction * cameraNearplane;
 
-                if (_targetGrid!.PositionComp.WorldAABB.Intersect(ref ray, out double aabbHitNear, out double aabbHitFar))
+                if (_targetGrid.PositionComp.WorldAABB.Intersect(ref ray, out double aabbHitNear, out double aabbHitFar))
                 {
                     // fire ray from aabb hit
                     Vector3D rayFrom = ray.Position + ray.Direction * aabbHitNear;
@@ -251,22 +255,21 @@ public static class TargetViewManager
         BlendType = MyBillboard.BlendTypeEnum.PostPP,
     };
 
-    private static void UpdatePaintIconBillboard(TargetData target, Vector3D cameraPos, MatrixD viewMatrix, MatrixD projMatrix, Vector2 viewportSize, double fov)
+    private static void UpdatePaintIconBillboard(Vector3D? painterPos, Vector3D targetPos, Vector3D cameraPos, MatrixD viewMatrix, MatrixD projMatrix, Vector2 viewportSize, double fov)
     {
-        if (!target.PainterPos.HasValue)
+        if (!painterPos.HasValue)
             return;
 
         if (!MyTransparentMaterials.TryGetMaterial(WcApiSession.Materials.BlockTargetAtlas, out var mat))
             return;
 
-        Vector3D targetPos = target.Position;
         Vector3D targetDir = Vector3D.Normalize(targetPos - cameraPos);
         MatrixD viewProjMatrix = viewMatrix * projMatrix;
 
         float aspectRatio = viewportSize.X / viewportSize.Y;
         double fovDistScale = Math.Tan(fov * 0.5) * 0.1;
 
-        Vector3D screenPos = Vector3D.Transform(target.PainterPos.Value, viewProjMatrix);
+        Vector3D screenPos = Vector3D.Transform(painterPos.Value, viewProjMatrix);
 
         // align to pixel
         //screenPos.X = Math.Round(screenPos.X * viewportSize.X * 0.5) / (viewportSize.X * 0.5);
@@ -332,25 +335,46 @@ public static class TargetViewManager
             zoomAmount = _zoomAmount;
         }
 
-        var originalRendererState = new RendererState
+        Vector3D controlledEntityPos, targetPos;
+        Vector3D cameraUp;
+
+        if (!TryGetActor(controlledEntity.ActorId, out MyActor controlledGridActor))
         {
-            Lodding = MyCommon.LoddingSettings.Global.IsUpdateEnabled,
-            DrawBillboards = MyRender11.Settings.DrawBillboards,
-            EyeAdaption = MyRender11.Postprocess.EnableEyeAdaptation,
-            Flares = MyRender11.DebugOverrides.Flares,
-            SSAO = MyRender11.DebugOverrides.SSAO,
-            Bloom = MyRender11.DebugOverrides.Bloom,
-            ShadowCameraFrozen = MyRender11.Settings.ShadowCameraFrozen,
-            ViewportResolution = MyRender11.ViewportResolution,
-            ResolutionI = MyRender11.ResolutionI,
-        };
+            return false;
+        }
+        else
+        {
+            controlledEntityPos = Vector3D.Transform(controlledEntity.LocalVolume.Center, controlledGridActor.WorldMatrix);
+            cameraUp = controlledGridActor.WorldMatrix.Up;
+        }
+
+        if (!TryGetActor(target.ActorId, out MyActor targetGridActor))
+        {
+            return false;
+        }
+        else
+        {
+            targetPos = Vector3D.Transform(target.LocalVolume.Center, targetGridActor.WorldMatrix);
+        }
+
+        var originalRendererState = new RendererState
+            {
+                Lodding = MyCommon.LoddingSettings.Global.IsUpdateEnabled,
+                DrawBillboards = MyRender11.Settings.DrawBillboards,
+                EyeAdaption = MyRender11.Postprocess.EnableEyeAdaptation,
+                Flares = MyRender11.DebugOverrides.Flares,
+                SSAO = MyRender11.DebugOverrides.SSAO,
+                Bloom = MyRender11.DebugOverrides.Bloom,
+                ShadowCameraFrozen = MyRender11.Settings.ShadowCameraFrozen,
+                ViewportResolution = MyRender11.ViewportResolution,
+                ResolutionI = MyRender11.ResolutionI,
+            };
         var originalCameraState = CameraState.From(MyRender11.Environment.Matrices);
 
-        Vector3D targetPos = target.Position;
-        Vector3D targetDir = Vector3D.Normalize(targetPos - controlledEntity.Position);
-        Vector3D cameraPos = controlledEntity.Position + (targetDir * controlledEntity.Radius);
+        Vector3D targetDir = Vector3D.Normalize(targetPos - controlledEntityPos);
+        Vector3D cameraPos = controlledEntityPos + (targetDir * controlledEntity.Radius);
 
-        double targetDist = Vector3D.Distance(targetPos, cameraPos);
+        double targetDist = Vector3D.Distance(targetPos, controlledEntityPos);
 
         if (targetDist < Math.Max(Settings.MinDistance, controlledEntity.Radius + target.Radius) || targetDist > renderCamera.FarPlaneDistance)
             return false;
@@ -371,15 +395,15 @@ public static class TargetViewManager
             return false;
 
         double aspectRatio = (double)viewportRes.X / (double)viewportRes.Y;
-        double fov = 2 * Math.Atan2(target.BoundingSphere.Radius / MathHelper.Saturate(aspectRatio), targetDist);
+        double fov = 2 * Math.Atan2(target.Radius / MathHelper.Saturate(aspectRatio), targetDist);
 
         // this "safe fov" thing is wrong but it works
         double eps = 0.0000001;
-        double safeFovV = MathHelper.Clamp(2 * Math.Atan2(target.BoundingSphere.Radius, targetDist) * aspectRatio, eps, Math.PI - eps);
+        double safeFovV = MathHelper.Clamp(2 * Math.Atan2(target.Radius, targetDist) * aspectRatio, eps, Math.PI - eps);
         MatrixD projMatrix = MatrixD.CreatePerspectiveFieldOfView(safeFovV, aspectRatio, renderCamera.NearPlaneDistance, renderCamera.FarPlaneDistance);
-        MatrixD viewMatrix = GetViewMatrix(cameraPos, controlledEntity.UpVector, targetPos);
+        MatrixD viewMatrix = GetViewMatrix(cameraPos, cameraUp, targetPos);
 
-        UpdatePaintIconBillboard(target, cameraPos, viewMatrix, projMatrix, viewportRes, safeFovV);
+        UpdatePaintIconBillboard(target.PainterPos, targetPos, cameraPos, viewMatrix, projMatrix, viewportRes, safeFovV);
 
         _lastViewport = new MyViewport(viewportPos.X, viewportPos.Y, viewportRes.X, viewportRes.Y);
         _lastViewMatrix = viewMatrix;
@@ -494,7 +518,7 @@ public static class TargetViewManager
 
     private static bool TryGetActor(MyEntity entity, out MyActor actor)
     {
-        actor = null;
+        actor = null!;
         if (entity?.Render is not MyRenderComponentBase renderComp)
         {
             return false;
@@ -503,11 +527,25 @@ public static class TargetViewManager
         try
         {
             uint actorId = renderComp.GetRenderObjectID();
-            actor = actorId != uint.MaxValue ? MyIDTracker<MyActor>.FindByID(actorId) : null;
+            actor = actorId != uint.MaxValue ? MyIDTracker<MyActor>.FindByID(actorId) : null!;
             return actor != null;
         }
         catch
         {
+            return false;
+        }
+    }
+
+    private static bool TryGetActor(uint actorId, out MyActor actor)
+    {
+        try
+        {
+            actor = actorId != uint.MaxValue ? MyIDTracker<MyActor>.FindByID(actorId) : null!;
+            return actor != null;
+        }
+        catch
+        {
+            actor = null!;
             return false;
         }
     }
