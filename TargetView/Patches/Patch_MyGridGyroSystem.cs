@@ -7,9 +7,9 @@ namespace TargetView.Patches;
 [HarmonyPatch]
 public static class Patch_MyGridGyroSystem
 {
-    [HarmonyPatch(typeof(MyGridGyroSystem), nameof(MyGridGyroSystem.Update))]
+    [HarmonyPatch(typeof(MyGridGyroSystem), "Update")]
     [HarmonyPrefix]
-    public static void GetAngularVelocity_Prefix(ref Vector3 ___m_controlTorque)
+    public static void Update_Prefix(ref Vector3 ___m_controlTorque)
     {
         if (TargetViewManager.IsPainting)
         {
