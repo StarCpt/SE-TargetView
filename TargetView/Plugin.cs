@@ -8,66 +8,65 @@ using System.Reflection;
 using VRage;
 using VRage.Plugins;
 
-namespace TargetView
+namespace TargetView;
+
+public class Plugin : IPlugin, IHandleInputPlugin
 {
-    public class Plugin : IPlugin, IHandleInputPlugin
+    public static TargetViewSettings Settings { get; private set; }
+    public static Boxed<(uint CharacterActorId, string[] MaterialsDisabledInFirst)>? FirstPersonCharacter = null;
+
+    public Plugin()
     {
-        public static TargetViewSettings Settings { get; private set; }
-        public static Boxed<(uint CharacterActorId, string[] MaterialsDisabledInFirst)>? FirstPersonCharacter = null;
+        Settings = TargetViewSettings.Load();
+    }
 
-        public Plugin()
+    public void Init(object gameInstance)
+    {
+        new Harmony(nameof(TargetView)).PatchAll(Assembly.GetExecutingAssembly());
+    }
+
+    private uint _counter = 0;
+    public void Update()
+    {
+        if (!Settings.Enabled)
+            return;
+
+        if (MySession.Static != null && MySession.Static.Ready)
         {
-            Settings = TargetViewSettings.Load();
+            TargetViewManager.Update();
+            TargetViewManager.HandleInput();
         }
 
-        public void Init(object gameInstance)
+        if (++_counter % 10 != 0)
+            return;
+
+        if (MySession.Static?.CameraController?.Entity is MyCharacter character && (character.IsInFirstPersonView || character.ForceFirstPersonCamera))
         {
-            new Harmony(nameof(TargetView)).PatchAll(Assembly.GetExecutingAssembly());
+            FirstPersonCharacter = new((character.Render.GetRenderObjectID(), character.Definition.MaterialsDisabledIn1st));
         }
-
-        private uint _counter = 0;
-        public void Update()
+        else
         {
-            if (!Settings.Enabled)
-                return;
-
-            if (MySession.Static != null && MySession.Static.Ready)
-            {
-                TargetViewManager.Update();
-                TargetViewManager.HandleInput();
-            }
-
-            if (++_counter % 10 != 0)
-                return;
-
-            if (MySession.Static?.CameraController?.Entity is MyCharacter character && (character.IsInFirstPersonView || character.ForceFirstPersonCamera))
-            {
-                FirstPersonCharacter = new((character.Render.GetRenderObjectID(), character.Definition.MaterialsDisabledIn1st));
-            }
-            else
-            {
-                FirstPersonCharacter = null;
-            }
+            FirstPersonCharacter = null;
         }
+    }
 
-        public void HandleInput()
-        {
-            //if (!Settings.Enabled)
-            //    return;
-            //
-            //if (MySession.Static != null && MySession.Static.Ready)
-            //{
-            //    TargetViewManager.HandleInput();
-            //}
-        }
+    public void HandleInput()
+    {
+        //if (!Settings.Enabled)
+        //    return;
+        //
+        //if (MySession.Static != null && MySession.Static.Ready)
+        //{
+        //    TargetViewManager.HandleInput();
+        //}
+    }
 
-        public void OpenConfigDialog()
-        {
-            MyGuiSandbox.AddScreen(new MyGuiScreenPluginConfig());
-        }
+    public void OpenConfigDialog()
+    {
+        MyGuiSandbox.AddScreen(new MyGuiScreenPluginConfig());
+    }
 
-        public void Dispose()
-        {
-        }
+    public void Dispose()
+    {
     }
 }
