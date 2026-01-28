@@ -8,46 +8,30 @@ namespace TargetView.Patches;
 [HarmonyPatch]
 public static class Patch_MyRender11
 {
-    public static IBorrowedRtvTexture? TargetViewTexture = null;
-    public static MyViewport TargetViewViewport;
-
-    [HarmonyPatch(typeof(MyRender11), nameof(MyRender11.DrawGameScene))]
-    [HarmonyPrefix]
-    public static void MyRender11_DrawGameScene_Prefix(IRtvBindable renderTarget)
-    {
-        if (renderTarget is null)
-            return;
-
-        if (!Plugin.Settings.Enabled)
-            return;
-
-        TargetViewManager.Draw(renderTarget.Rtv.Description.Format);
-    }
-
     [HarmonyPatch(typeof(MyRender11), nameof(MyRender11.DrawGameScene))]
     [HarmonyPostfix]
     public static void MyRender11_DrawGameScene_Postfix(IRtvBindable renderTarget)
     {
-        if (renderTarget is not null && TargetViewTexture is not null)
-        {
-            //MyCopyToRT.Run(renderTarget, TargetViewTexture, customViewport: TargetViewViewport, shouldStretch: true);
-            //MyRender11.RC.SetRtvNull();
+        if (renderTarget is null || !Plugin.Settings.Enabled)
+            return;
 
+        bool success = TargetViewManager.Draw(renderTarget.Rtv.Description.Format, out var targetViewTexture, out var targetViewViewport);
+        if (success)
+        {
             var srcRegion = new ResourceRegion
             {
                 Left = 0,
                 Top = 0,
                 Front = 0,
                 Back = 1,
-                Right = (int)TargetViewViewport.Width,
-                Bottom = (int)TargetViewViewport.Height,
+                Right = (int)targetViewViewport.Width,
+                Bottom = (int)targetViewViewport.Height,
             };
-            int destX = (int)TargetViewViewport.OffsetX;
-            int destY = (int)TargetViewViewport.OffsetY;
-            MyRender11.RC.CopySubresourceRegion(TargetViewTexture, 0, srcRegion, renderTarget, 0, destX, destY, 0);
+            int destX = (int)targetViewViewport.OffsetX;
+            int destY = (int)targetViewViewport.OffsetY;
+            MyRender11.RC.CopySubresourceRegion(targetViewTexture, 0, srcRegion, renderTarget, 0, destX, destY, 0);
 
-            TargetViewTexture.Release();
-            TargetViewTexture = null;
+            targetViewTexture.Release();
         }
     }
 }

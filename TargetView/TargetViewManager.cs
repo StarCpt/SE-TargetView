@@ -16,6 +16,7 @@ using VRage.Game.Utils;
 using VRage.Input;
 using VRage.Render.Scene;
 using VRage.Render11.Common;
+using VRage.Render11.Resources;
 using VRage.Utils;
 using VRageMath;
 using VRageRender;
@@ -305,8 +306,11 @@ public static class TargetViewManager
     /// Render thread only
     /// </summary>
     /// <returns></returns>
-    public static bool Draw(Format rtvFormat)
+    public static bool Draw(Format rtvFormat, out IBorrowedRtvTexture targetViewTexture, out MyViewport targetViewViewport)
     {
+        targetViewTexture = null!;
+        targetViewViewport = default;
+
         if (MySession.Static is null || !MySession.Static.Ready)
             return false;
 
@@ -447,8 +451,8 @@ public static class TargetViewManager
             SetRendererState(originalRendererState);
             SetCameraViewMatrix(originalCameraState, renderCamera.FarFarPlaneDistance, 0, false);
 
-            Patch_MyRender11.TargetViewTexture = tempRtv;
-            Patch_MyRender11.TargetViewViewport = new MyViewport(viewportPos.X, viewportPos.Y, viewportRes.X, viewportRes.Y);
+            targetViewTexture = tempRtv;
+            targetViewViewport = new MyViewport(viewportPos.X, viewportPos.Y, viewportRes.X, viewportRes.Y);
         }
 
         if (paintIconBillboardIndex != -1)
