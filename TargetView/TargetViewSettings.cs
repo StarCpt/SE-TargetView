@@ -18,7 +18,6 @@ public class TargetViewSettings
 
     public bool Enabled { get; set; } = true;
     public bool HeadFix { get; set; } = true;
-    public bool OcclusionFix { get; set; } = true;
 
     public int MinDistance { get; set; } = 100;
 

@@ -16,7 +16,6 @@ namespace TargetView;
 public static class TargetViewRenderer
 {
     public static bool IsDrawing { get; private set; }
-    public static bool FixOcclusion = false;
 
     private static MyRenderContext RC => MyRender11.RC;
     private static ref MyRenderSettings Settings => ref MyRender11.Settings;
@@ -74,7 +73,6 @@ public static class TargetViewRenderer
     public static void Draw(IRtvBindable renderTarget, bool drawBorder)
     {
         IsDrawing = true;
-        FixOcclusion = Plugin.Settings.OcclusionFix;
 
         if (Plugin.Settings.HeadFix)
         {
@@ -167,7 +165,6 @@ public static class TargetViewRenderer
         MyManagers.Cull.OnFrameEnd();
 
         IsDrawing = false;
-        FixOcclusion = false;
     }
 
     private static void CopyReplaceNoAlpha(ISrvBindable source, IRtvBindable destination, bool stretch, Vector2I destOffset, Vector2I destSize)

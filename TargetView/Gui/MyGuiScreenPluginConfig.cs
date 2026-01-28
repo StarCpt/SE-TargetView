@@ -230,5 +230,4 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
 
     void IsEnabledCheckedChanged(MyGuiControlCheckbox cb) => Plugin.Settings.Enabled = cb.IsChecked;
     void IsHeadfixCheckedChanged(MyGuiControlCheckbox cb) => Plugin.Settings.HeadFix = cb.IsChecked;
-    void IsOcclusionfixCheckedChanged(MyGuiControlCheckbox cb) => Plugin.Settings.OcclusionFix = cb.IsChecked;
 }
