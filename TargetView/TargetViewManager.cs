@@ -335,7 +335,7 @@ public static class TargetViewManager
                 target = _target.Value;
             }
 
-            float zoomDelta = MyCommon.GetLastFrameDelta() * (_zoom ? 1 : -1) * 5;
+            float zoomDelta = MyCommon.GetLastFrameDelta() * (_zoom ? 1 : -1) * ((float)Settings.ZoomSpeed * 1.65f);
             _zoomAmount = MathHelper.Clamp(_zoomAmount + zoomDelta, 0, 1);
             zoomAmount = _zoomAmount;
         }

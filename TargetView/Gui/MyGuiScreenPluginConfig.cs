@@ -121,12 +121,21 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
             pos.Y += borderThicknessSlider.Size.Y + space;
         }
 
-        pos.Y += 0.01f;
+        pos.Y += 0.005f;
 
-        MyGuiControlTextbox minDistTextBox = AddIntTextBox("Min Distance", pos, 0.1f, settings.MinDistance, 0, 100000, val => settings.MinDistance = val);
+        MyGuiControlTextbox minDistTextBox = AddIntTextBox("Min Distance", pos with { X = -0.0025f }, 0.1315f, settings.MinDistance, 0, 100000, val => settings.MinDistance = val);
         pos.Y += minDistTextBox.Size.Y + space;
+        pos.Y += 0.005f;
 
-        pos.Y += 0.01f;
+        MyGuiControlSlider zoomSpeedSlider = new MyGuiControlSlider(pos with { X = -0.003f }, 1, 5, 0.133f, 3, intValue: false, showLabel: true, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
+        zoomSpeedSlider.Value = settings.ZoomSpeed;
+        zoomSpeedSlider.CustomLabelText = false;
+        zoomSpeedSlider.ValueChanged += slider => settings.ZoomSpeed = slider.Value;
+        AddControl(zoomSpeedSlider);
+        AddCustomSliderLabel(zoomSpeedSlider, val => val.ToString("0.00"));
+        AddCaption(zoomSpeedSlider, "Zoom Speed");
+        pos.Y += zoomSpeedSlider.Size.Y + space;
+
         MyGuiControlButton zoomBindingButton = AddKeyboardKeyBindingButton(pos, Plugin.Settings.ZoomKey, key => Plugin.Settings.ZoomKey = key, MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
         AddCaption(zoomBindingButton, "Zoom Key", -0.005f);
         pos.Y += zoomBindingButton.Size.Y + space;

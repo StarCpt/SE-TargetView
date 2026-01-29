@@ -23,6 +23,7 @@ public class TargetViewSettings
 
     public Vector2I Position { get; set; } = new Vector2I(10, 10);
     public Vector2I Size { get; set; } = new Vector2I(500, 500);
+    public float ZoomSpeed { get; set; } = 3;
     public MyKeys ZoomKey { get; set; } = MyKeys.M;
     public MyKeys PainterKey { get; set; } = MyKeys.B;
 
