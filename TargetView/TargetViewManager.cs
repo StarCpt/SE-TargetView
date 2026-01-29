@@ -518,26 +518,6 @@ public static class TargetViewManager
         }
     }
 
-    private static bool TryGetActor(MyEntity entity, out MyActor actor)
-    {
-        actor = null!;
-        if (entity?.Render is not MyRenderComponentBase renderComp)
-        {
-            return false;
-        }
-
-        try
-        {
-            uint actorId = renderComp.GetRenderObjectID();
-            actor = actorId != uint.MaxValue ? MyIDTracker<MyActor>.FindByID(actorId) : null!;
-            return actor != null;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
     private static bool TryGetActor(uint actorId, out MyActor actor)
     {
         try
