@@ -64,13 +64,6 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
         //Controls.Add(headFixCheckbox);
         //AddCaption(headFixCheckbox, "Head fix");
         //pos.Y += headFixCheckbox.Size.Y + space;
-        //
-        //MyGuiControlCheckbox occlusionFixCheckbox = new MyGuiControlCheckbox(pos, isChecked: settings.OcclusionFix, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
-        //occlusionFixCheckbox.SetToolTip("Disable occlusion culling while drawing the camera view to\nfix invisible entities caused by incorrect culling.\nMay lower FPS depending on the scene.");
-        //occlusionFixCheckbox.IsCheckedChanged += IsOcclusionfixCheckedChanged;
-        //Controls.Add(occlusionFixCheckbox);
-        //AddCaption(occlusionFixCheckbox, "Occlusion fix");
-        //pos.Y += occlusionFixCheckbox.Size.Y + space;
 
         pos.Y += 0.02f;
 
@@ -139,6 +132,7 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
         pos.Y += zoomBindingButton.Size.Y + space;
 
         MyGuiControlButton painterBindingButton = AddKeyboardKeyBindingButton(pos, Plugin.Settings.PainterKey, key => Plugin.Settings.PainterKey = key, MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
+        painterBindingButton.SetToolTip("Only available when using WeaponCore.\nShows paint cursor in target view window\nand disables gyro control when this key is pressed.");
         AddCaption(painterBindingButton, "Painter Key", -0.005f);
         pos.Y += painterBindingButton.Size.Y + space;
 
