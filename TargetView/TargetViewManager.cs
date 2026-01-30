@@ -202,7 +202,10 @@ public static class TargetViewManager
             return;
 
         if (!_controlled.HasValue || !_target.HasValue || _controlledGrid is null || _targetGrid is null)
+        {
+            IsPainting = false;
             return;
+        }
 
         IsPainting = Plugin.Settings.PainterKey != MyKeys.None && MyInput.Static.IsKeyPress(Plugin.Settings.PainterKey);
         if (IsPainting && MyTransparentMaterials.TryGetMaterial(WcApiSession.Materials.TargetReticle, out var targetReticleMaterial))
