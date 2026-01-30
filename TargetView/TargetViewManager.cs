@@ -110,6 +110,8 @@ public static class TargetViewManager
 
     private static TargetViewSettings Settings => Plugin.Settings;
 
+    public static long? ControlledCockpitId { get; private set; } = null;
+
     private static ControlledEntityData? _controlled = null;
     private static TargetData? _target = null;
     private static readonly object _sync = new();
@@ -127,6 +129,8 @@ public static class TargetViewManager
     {
         MyCockpit? controlledCockpit = MySession.Static.LocalCharacter?.Parent as MyCockpit;
         MyCubeGrid? controlledGrid = controlledCockpit?.CubeGrid;
+
+        ControlledCockpitId = controlledCockpit?.EntityId;
 
         MyCubeGrid? target = null;
         Vector3D? targetPaintPosLocal = null;
@@ -198,10 +202,7 @@ public static class TargetViewManager
 
     public static void HandleInput()
     {
-        if (!WcApiSession.WcPresent)
-            return;
-
-        if (!_controlled.HasValue || !_target.HasValue || _controlledGrid is null || _targetGrid is null)
+        if (!WcApiSession.WcPresent || !_controlled.HasValue || !_target.HasValue || _targetGrid?.PositionComp is null)
         {
             IsPainting = false;
             return;
@@ -230,7 +231,7 @@ public static class TargetViewManager
 
             Utils.DrawMouseCursor(targetReticleMaterial.Texture, screenUV, 32);
 
-            if (MyInput.Static.IsNewLeftMousePressed() && _controlledGrid.PositionComp != null)
+            if (MyInput.Static.IsNewLeftMousePressed())
             {
                 MatrixD lastViewMatrix = _lastViewMatrix;
                 MatrixD lastProjMatrix = _lastProjMatrix;
