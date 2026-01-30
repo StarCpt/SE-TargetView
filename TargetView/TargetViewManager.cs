@@ -232,12 +232,16 @@ public static class TargetViewManager
 
             if (MyInput.Static.IsNewLeftMousePressed() && _controlledGrid.PositionComp != null)
             {
-                Vector3D cameraPos = _controlledGrid.PositionComp.WorldAABB.Center;
-                double cameraNearplane = _controlled.Value.Radius;
+                MatrixD lastViewMatrix = _lastViewMatrix;
+                MatrixD lastProjMatrix = _lastProjMatrix;
+
+                // extract view position from view matrix
+                Vector3D viewPos = new Vector3D(lastViewMatrix.M41, lastViewMatrix.M42, lastViewMatrix.M43);
+                viewPos = -Vector3D.TransformNormal(viewPos, MatrixD.Transpose(lastViewMatrix));
 
                 RayD ray = default;
-                ray.Direction = Utils.ComputeWorldRay(_paintCursorUV, _lastViewMatrix, _lastProjMatrix);
-                ray.Position = cameraPos + -_lastViewMatrix.Col2 * cameraNearplane;
+                ray.Direction = Utils.ComputeWorldRay(_paintCursorUV, lastViewMatrix, lastProjMatrix);
+                ray.Position = viewPos;
 
                 if (_targetGrid.PositionComp.WorldAABB.Intersect(ref ray, out double aabbHitNear, out double aabbHitFar))
                 {
