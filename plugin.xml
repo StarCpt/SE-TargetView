@@ -3,11 +3,11 @@
 
   <Id>StarCpt/SE-TargetView</Id>
   <Author>StarCpt</Author>
-  <FriendlyName>Target View</FriendlyName>
+  <FriendlyName>Target View (dev folder)</FriendlyName>
   <Tooltip>Shows the locked target in a picture-in-picture screen.</Tooltip>
 
   <Commit>dev folder use only</Commit>
 
-  <Description>Shows the currently locked target in a configurable ingame picture-in-picture screen.</Description>
+  <Description>DEV FOLDER!! Shows the currently locked target in a configurable ingame picture-in-picture screen.</Description>
 
 </PluginData>
