@@ -197,6 +197,7 @@ public static class TargetViewManager
 
     // render -> game
     private static MyViewport _lastViewport = default;
+    private static Vector3D _lastTargetPos = Vector3D.Zero;
     private static MatrixD _lastViewMatrix = MatrixD.Identity;
     private static MatrixD _lastProjMatrix = MatrixD.Identity;
 
@@ -233,6 +234,9 @@ public static class TargetViewManager
 
             if (MyInput.Static.IsNewLeftMousePressed())
             {
+                // technically a race condition but very very rarely a problem
+                // TODO: add lock
+                Vector3D lastTargetPos = _lastTargetPos;
                 MatrixD lastViewMatrix = _lastViewMatrix;
                 MatrixD lastProjMatrix = _lastProjMatrix;
 
@@ -240,8 +244,12 @@ public static class TargetViewManager
                 Vector3D viewPos = new Vector3D(lastViewMatrix.M41, lastViewMatrix.M42, lastViewMatrix.M43);
                 viewPos = -Vector3D.TransformNormal(viewPos, MatrixD.Transpose(lastViewMatrix));
 
+                // get target position discrepancy between render and game objects
+                Vector3D targetOffset = _targetGrid.PositionComp.WorldAABB.Center - lastTargetPos;
+                viewPos += targetOffset;
+
                 RayD ray = default;
-                ray.Direction = Utils.ComputeWorldRay(_paintCursorUV, lastViewMatrix, lastProjMatrix);
+                ray.Direction = Utils.ComputeWorldRayDir(_paintCursorUV, lastViewMatrix, lastProjMatrix);
                 ray.Position = viewPos;
 
                 if (_targetGrid.PositionComp.WorldAABB.Intersect(ref ray, out double aabbHitNear, out double aabbHitFar))
@@ -421,6 +429,7 @@ public static class TargetViewManager
         UpdatePaintIconBillboard(targetPainterPos, targetPos, cameraPos, viewMatrix, projMatrix, viewportRes, safeFovV);
 
         _lastViewport = new MyViewport(viewportPos.X, viewportPos.Y, viewportRes.X, viewportRes.Y);
+        _lastTargetPos = targetPos;
         _lastViewMatrix = viewMatrix;
         _lastProjMatrix = MatrixD.CreatePerspectiveFieldOfView(fov, aspectRatio, renderCamera.NearPlaneDistance, renderCamera.FarPlaneDistance);
 

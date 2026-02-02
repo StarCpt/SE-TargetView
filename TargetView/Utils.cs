@@ -26,7 +26,7 @@ public static class Utils
         };
     }
 
-    public static Vector3 ComputeWorldRay(Vector2 uv, Matrix viewMatrix, Matrix projMatrix)
+    public static Vector3 ComputeWorldRayDir(Vector2 uv, Matrix viewMatrix, Matrix projMatrix)
     {
         float ray_x = 1.0f / projMatrix.M11;
         float ray_y = 1.0f / projMatrix.M22;
