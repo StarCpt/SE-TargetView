@@ -138,7 +138,7 @@ public static class TargetViewManager
         if (WcApiSession.WcPresent)
         {
             target = WcApiSession.GetLockedTarget(controlledCockpit)?.GetTopMostParent(typeof(MyCubeGrid)) as MyCubeGrid;
-            targetPaintPosLocal = WcApiSession.GetLocalPainterPos();
+            targetPaintPosLocal = target is not null ? WcApiSession.GetLocalPainterPos(target) : null;
         }
         else if (controlledCockpit?.TargetData is { IsTargetLocked: true} targetData &&
             MyEntities.TryGetEntityById(targetData.TargetId, out var lockedEntity, false) &&
