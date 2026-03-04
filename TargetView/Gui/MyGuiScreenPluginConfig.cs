@@ -112,17 +112,21 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
         pos.Y += minDistTextBox.Size.Y + space;
         pos.Y += 0.005f;
 
-        MyGuiControlSlider zoomSpeedSlider = new MyGuiControlSlider(pos with { X = -0.003f }, 1, 5, 0.133f, 3, intValue: false, showLabel: true, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
-        zoomSpeedSlider.Value = settings.ZoomSpeed;
-        zoomSpeedSlider.CustomLabelText = false;
-        zoomSpeedSlider.ValueChanged += slider => settings.ZoomSpeed = slider.Value;
-        AddControl(zoomSpeedSlider);
-        AddCustomSliderLabel(zoomSpeedSlider, val => val.ToString("0.00"));
-        AddCaption(zoomSpeedSlider, "Zoom Speed");
+        MyGuiControlSlider zoomSpeedSlider = AddFloatSlider(
+            "Zoom Speed", pos with { X = -0.003f }, 0.133f,
+            settings.ZoomSpeed, 1, 5, 3,
+            val => settings.ZoomSpeed = val,
+            val => val.ToString("0.00"));
         pos.Y += zoomSpeedSlider.Size.Y + space;
 
         MyGuiControlButton zoomBindingButton = AddKeyboardKeyBindingButton(pos, Plugin.Settings.ZoomKey, key => Plugin.Settings.ZoomKey = key, MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
         AddCaption(zoomBindingButton, "Zoom Key", -0.005f);
+
+        MyGuiControlCheckbox zoomToggleCheckbox = new(new Vector2(pos.X + 0.135f, pos.Y - 0.0045f), toolTip: "Off: Hold to zoom\nOn: Toggles zoom", isChecked: settings.ToggleZoom, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
+        zoomToggleCheckbox.IsCheckedChanged += _ => settings.ToggleZoom = zoomToggleCheckbox.IsChecked;
+        AddControl(zoomToggleCheckbox);
+        AddCaption(zoomToggleCheckbox, "Toggle", xOffset: 0.085f);
+
         pos.Y += zoomBindingButton.Size.Y + space;
 
         {
@@ -170,14 +174,25 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
         return control;
     }
 
-    private MyGuiControlSlider AddIntSlider(string caption, Vector2 position, float width, int initialValue, int minValue, int maxValue, int defaultValue, Action<int> setter, Func<int, string> labelTextFunc, MyGuiDrawAlignEnum originAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP)
+    private MyGuiControlSlider AddIntSlider(string caption, Vector2 position, float width, int initialValue, int minValue, int maxValue, int defaultValue, Action<int> setter, Func<int, string> valueToTextFunc, MyGuiDrawAlignEnum originAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP)
     {
         MyGuiControlSlider control = new MyGuiControlSlider(position, minValue, maxValue, width, defaultValue, intValue: true, originAlign: originAlign);
         control.Value = initialValue;
         control.ValueChanged += _ => setter.Invoke((int)control.Value);
         AddControl(control);
         AddCaption(control, caption);
-        AddCustomSliderLabel(control, val => labelTextFunc.Invoke((int)val));
+        AddCustomSliderLabel(control, val => valueToTextFunc.Invoke((int)val));
+        return control;
+    }
+
+    private MyGuiControlSlider AddFloatSlider(string caption, Vector2 position, float width, float initialValue, float minValue, float maxValue, float defaultValue, Action<float> setter, Func<float, string> valueToTextFunc, MyGuiDrawAlignEnum originAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP)
+    {
+        MyGuiControlSlider control = new MyGuiControlSlider(position, minValue, maxValue, width, defaultValue, originAlign: originAlign);
+        control.Value = initialValue;
+        control.ValueChanged += _ => setter.Invoke(control.Value);
+        AddControl(control);
+        AddCaption(control, caption);
+        AddCustomSliderLabel(control, val => valueToTextFunc.Invoke(val));
         return control;
     }
 
@@ -222,9 +237,9 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
         return button;
     }
 
-    private void AddCaption(MyGuiControlBase control, string caption, float yOffset = 0)
+    private void AddCaption(MyGuiControlBase control, string caption, float yOffset = 0, float xOffset = 0)
     {
-        Controls.Add(new MyGuiControlLabel(control.Position + new Vector2(-space, control.Size.Y / 2 + yOffset), text: caption, originAlign: MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER));
+        Controls.Add(new MyGuiControlLabel(control.Position + new Vector2(-space + xOffset, control.Size.Y / 2 + yOffset), text: caption, originAlign: MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER));
     }
 
     private void AddCustomSliderLabel(MyGuiControlSlider slider, Func<float, string> valueToTextFunc)

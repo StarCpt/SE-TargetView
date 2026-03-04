@@ -184,11 +184,28 @@ public static class TargetViewManager
                 _targetGrid = target;
             }
 
-            if (newZoom != _zoom)
+            if (Settings.ToggleZoom)
             {
-                _zoomAmount = _zoom ? (float)Cbrt(1 - Math.Pow(1 - _zoomAmount, 3)) : (float)(1 - Cbrt(1 - Math.Pow(_zoomAmount, 3)));
-                _zoom = newZoom;
+                if (MyInput.Static.IsNewKeyPressed(Plugin.Settings.ZoomKey))
+                {
+                    _zoomAmount = ChangeZoomDirection(_zoomAmount);
+                    _zoom = !_zoom;
+                }
             }
+            else
+            {
+                bool newZoom = MyInput.Static.IsKeyPress(Plugin.Settings.ZoomKey);
+                if (newZoom != _zoom)
+                {
+                    _zoomAmount = ChangeZoomDirection(_zoomAmount);
+                    _zoom = newZoom;
+                }
+            }
+        }
+
+        static float ChangeZoomDirection(float currentZoomAmount)
+        {
+            return _zoom ? (float)Cbrt(1 - Math.Pow(1 - currentZoomAmount, 3)) : (float)(1 - Cbrt(1 - Math.Pow(currentZoomAmount, 3)));
         }
     }
 
