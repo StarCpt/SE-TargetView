@@ -230,7 +230,7 @@ public static class TargetViewManager
                 Y = MathHelper.Lerp(topLeft.Y, bottomRight.Y, _paintCursorUV.Y),
             };
 
-            Utils.DrawMouseCursor(targetReticleMaterial.Texture, screenUV, 32);
+            Utils.DrawMouseCursor(targetReticleMaterial.Texture, screenUV, Settings.PainterCursorSize, Settings.PainterCursorColor);
 
             if (MyInput.Static.IsNewLeftMousePressed())
             {

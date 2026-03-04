@@ -21,7 +21,7 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
 
     private static readonly Vector2I _minSize = new Vector2I(50, 50);
 
-    public MyGuiScreenPluginConfig() : base(new Vector2(0.5f, 0.5f), MyGuiConstants.SCREEN_BACKGROUND_COLOR, new Vector2(0.47f, 0.7f), false, null, MySandboxGame.Config.UIBkOpacity, MySandboxGame.Config.UIOpacity)
+    public MyGuiScreenPluginConfig() : base(new Vector2(0.5f, 0.5f), MyGuiConstants.SCREEN_BACKGROUND_COLOR, new Vector2(0.47f, 0.85f), false, null, MySandboxGame.Config.UIBkOpacity, MySandboxGame.Config.UIOpacity)
     {
         EnabledBackgroundFade = true;
         CloseButtonEnabled = true;
@@ -51,25 +51,18 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
         pos.Y += space;
 
         MyGuiControlCheckbox enabledCheckbox = new MyGuiControlCheckbox(pos, isChecked: settings.Enabled, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
-        enabledCheckbox.IsCheckedChanged += IsEnabledCheckedChanged;
+        enabledCheckbox.IsCheckedChanged += cb => Plugin.Settings.Enabled = cb.IsChecked;
         Controls.Add(enabledCheckbox);
         AddCaption(enabledCheckbox, "Enabled");
         pos.Y += enabledCheckbox.Size.Y + space;
 
         pos.X -= 0.06f;
+        pos.Y += space;
 
-        //MyGuiControlCheckbox headFixCheckbox = new MyGuiControlCheckbox(pos, isChecked: settings.HeadFix, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
-        //headFixCheckbox.SetToolTip("Fix invisible character head on camera lcd in 1st person view.\nMay cause issues with modded characters.");
-        //headFixCheckbox.IsCheckedChanged += IsHeadfixCheckedChanged;
-        //Controls.Add(headFixCheckbox);
-        //AddCaption(headFixCheckbox, "Head fix");
-        //pos.Y += headFixCheckbox.Size.Y + space;
-
-        pos.Y += 0.02f;
-
-        Vector2I resolution = screenRes;
         {
             const float TEXTBOX_WIDTH = 0.08f;
+
+            Vector2I resolution = screenRes;
 
             MyGuiControlTextbox posXTextBox = AddIntTextBox(
                 "X Pos", pos with { X = -0.11f }, TEXTBOX_WIDTH,
@@ -99,25 +92,17 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
 
         // border
         {
-            MyGuiControlColor borderColorPicker = new MyGuiControlColor("", 1, pos, settings.BorderColor, Color.White, MyStringId.NullOrEmpty)
-            {
-                OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_CENTER_AND_VERTICAL_TOP,
-            };
-            borderColorPicker.OnChange += BorderColorPicker_OnChange;
-            AddControl(borderColorPicker);
-            AddControl(new MyGuiControlLabel(new Vector2(pos.X - borderColorPicker.Size.X * 0.5f, pos.Y - 0.005f), text: "Border Color", textScale: 0.8f, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP));
-            pos.Y += borderColorPicker.Size.Y + space;
-            pos.Y -= 0.02f;
+            MyGuiControlColor borderColorPicker = AddColorPicker(
+                "Border Color", pos, settings.BorderColor, Color.White,
+                color => settings.BorderColor = color,
+                MyGuiDrawAlignEnum.HORISONTAL_CENTER_AND_VERTICAL_TOP);
+            pos.Y += borderColorPicker.Size.Y - 0.01f;
 
-            MyGuiControlSlider borderThicknessSlider = new MyGuiControlSlider(pos with { X = -0.06f }, 0, 20, 0.2f, settings.BorderThickness, intValue: true, showLabel: true, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
-            borderThicknessSlider.CustomLabelText = false;
-            borderThicknessSlider.ValueChanged += slider =>
-            {
-                Plugin.Settings.BorderThickness = (int)slider.Value;
-            };
-            AddControl(borderThicknessSlider);
-            AddCustomSliderLabel(borderThicknessSlider, val => val.ToString("0 px"));
-            AddCaption(borderThicknessSlider, "Border Thickness");
+            MyGuiControlSlider borderThicknessSlider = AddIntSlider(
+                "Border Thickness", pos with { X = -0.06f }, 0.2f,
+                Plugin.Settings.BorderThickness, 0, 20, 1,
+                val => Plugin.Settings.BorderThickness = val,
+                val => val.ToString("0 px"));
             pos.Y += borderThicknessSlider.Size.Y + space;
         }
 
@@ -140,10 +125,25 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
         AddCaption(zoomBindingButton, "Zoom Key", -0.005f);
         pos.Y += zoomBindingButton.Size.Y + space;
 
-        MyGuiControlButton painterBindingButton = AddKeyboardKeyBindingButton(pos, Plugin.Settings.PainterKey, key => Plugin.Settings.PainterKey = key, MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
-        painterBindingButton.SetToolTip("Only available when using WeaponCore.\nShows paint cursor in target view window\nand disables gyro control when this key is pressed.");
-        AddCaption(painterBindingButton, "Painter Key", -0.005f);
-        pos.Y += painterBindingButton.Size.Y + space;
+        {
+            MyGuiControlButton painterBindingButton = AddKeyboardKeyBindingButton(pos, Plugin.Settings.PainterKey, key => Plugin.Settings.PainterKey = key, MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
+            painterBindingButton.SetToolTip("Only available when using WeaponCore.\nShows paint cursor in target view window\nand disables gyro control when this key is pressed.");
+            AddCaption(painterBindingButton, "Painter Key", -0.005f);
+            pos.Y += painterBindingButton.Size.Y + space;
+
+            MyGuiControlColor painterCursorColorPicker = AddColorPicker(
+                "Painter Color", pos, settings.PainterCursorColor, Color.White,
+                color => settings.PainterCursorColor = color,
+                MyGuiDrawAlignEnum.HORISONTAL_CENTER_AND_VERTICAL_TOP);
+            pos.Y += painterCursorColorPicker.Size.Y - 0.01f;
+
+            MyGuiControlSlider painterCursorSizeSlider = AddIntSlider(
+                "Painter Size", pos with { X = -0.06f }, 0.2f,
+                settings.PainterCursorSize, 16, 64, 32,
+                val => settings.PainterCursorSize = val,
+                val => val.ToString("0 px"));
+            pos.Y += painterCursorSizeSlider.Size.Y + space;
+        }
 
         // Bottom
         pos = new Vector2(0, (m_size!.Value.Y / 2) - space);
@@ -151,16 +151,34 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
         Controls.Add(closeButton);
     }
 
-    private void BorderColorPicker_OnChange(MyGuiControlColor control)
-    {
-        Plugin.Settings.BorderColor = control.Color;
-    }
-
     public override void HandleInput(bool receivedFocusInThisUpdate)
     {
         base.HandleInput(receivedFocusInThisUpdate);
 
         OnHandleInput?.Invoke();
+    }
+
+    private MyGuiControlColor AddColorPicker(string caption, Vector2 position, Color initialColor, Color defaultColor, Action<Color> setter, MyGuiDrawAlignEnum originAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP)
+    {
+        MyGuiControlColor control = new MyGuiControlColor("", 1, position, initialColor, defaultColor, MyStringId.NullOrEmpty)
+        {
+            OriginAlign = originAlign,
+        };
+        control.OnChange += _ => setter.Invoke(control.Color);
+        AddControl(control);
+        AddControl(new MyGuiControlLabel(new Vector2(position.X - control.Size.X * 0.5f, position.Y - 0.005f), text: caption, textScale: 0.8f, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP));
+        return control;
+    }
+
+    private MyGuiControlSlider AddIntSlider(string caption, Vector2 position, float width, int initialValue, int minValue, int maxValue, int defaultValue, Action<int> setter, Func<int, string> labelTextFunc, MyGuiDrawAlignEnum originAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP)
+    {
+        MyGuiControlSlider control = new MyGuiControlSlider(position, minValue, maxValue, width, defaultValue, intValue: true, originAlign: originAlign);
+        control.Value = initialValue;
+        control.ValueChanged += _ => setter.Invoke((int)control.Value);
+        AddControl(control);
+        AddCaption(control, caption);
+        AddCustomSliderLabel(control, val => labelTextFunc.Invoke((int)val));
+        return control;
     }
 
     private MyGuiControlTextbox AddIntTextBox(string caption, Vector2 position, float width, int initialValue, int min, int max, Action<int> setter, MyGuiDrawAlignEnum originAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP)
@@ -230,7 +248,4 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
     {
         Plugin.Settings.Save();
     }
-
-    void IsEnabledCheckedChanged(MyGuiControlCheckbox cb) => Plugin.Settings.Enabled = cb.IsChecked;
-    void IsHeadfixCheckedChanged(MyGuiControlCheckbox cb) => Plugin.Settings.HeadFix = cb.IsChecked;
 }

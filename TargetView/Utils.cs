@@ -38,7 +38,7 @@ public static class Utils
         return worldRay;
     }
 
-    public static void DrawMouseCursor(string mouseCursorTexture, Vector2 uv, float sizeInPx)
+    public static void DrawMouseCursor(string mouseCursorTexture, Vector2 uv, float sizeInPx, Color? color = null)
     {
         if (mouseCursorTexture != null)
         {
@@ -47,7 +47,7 @@ public static class Utils
 
             Vector2 normalizedSize = MyGuiManager.GetNormalizedSize(new Vector2(sizeInPx), 1f);
 
-            MyGuiManager.DrawSpriteBatch(mouseCursorTexture, normalizedCoord, normalizedSize, Color.White, MyGuiDrawAlignEnum.HORISONTAL_CENTER_AND_VERTICAL_CENTER, useFullClientArea: false, waitTillLoaded: false, null, 0f, 0f, ignoreBounds: true);
+            MyGuiManager.DrawSpriteBatch(mouseCursorTexture, normalizedCoord, normalizedSize, color ?? Color.White, MyGuiDrawAlignEnum.HORISONTAL_CENTER_AND_VERTICAL_CENTER, useFullClientArea: false, waitTillLoaded: false, null, 0f, 0f, ignoreBounds: true);
         }
     }
 

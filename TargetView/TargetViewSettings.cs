@@ -26,6 +26,8 @@ public class TargetViewSettings
     public float ZoomSpeed { get; set; } = 3;
     public MyKeys ZoomKey { get; set; } = MyKeys.M;
     public MyKeys PainterKey { get; set; } = MyKeys.B;
+    public Color PainterCursorColor { get; set; } = Color.White;
+    public int PainterCursorSize { get; set; } = 32;
 
     public int BorderThickness { get; set; } = 1;
     public Color BorderColor { get; set; } = Color.White;
