@@ -186,11 +186,13 @@ public static class TargetViewManager
 
             if (newZoom != _zoom)
             {
-                _zoomAmount = _zoom ? Utils.CubicEaseOut(_zoomAmount) : Utils.CubicEaseIn(_zoomAmount);
+                _zoomAmount = _zoom ? (float)Cbrt(1 - Math.Pow(1 - _zoomAmount, 3)) : (float)(1 - Cbrt(1 - Math.Pow(_zoomAmount, 3)));
                 _zoom = newZoom;
             }
         }
     }
+
+    static double Cbrt(double val) => Math.Pow(val, 1.0 / 3.0);
 
     public static bool IsPainting { get; private set; } = false;
     private static Vector2 _paintCursorUV = new Vector2(0.5f); // [0,1]
