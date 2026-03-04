@@ -180,24 +180,27 @@ public static class TargetViewManager
                 _targetGrid = target;
             }
 
-            if (!(MyHud.Chat != null && MyHud.Chat.m_chatScreenOpen) && !MyGuiScreenTerminal.IsOpen)
+            bool guiOpen = (MyHud.Chat != null && MyHud.Chat.m_chatScreenOpen) || MyGuiScreenTerminal.IsOpen;
+            if (!_controlled.HasValue || !_target.HasValue)
             {
-                if (Settings.ToggleZoom)
+                _zoomAmount = 0;
+                _zoom = false;
+            }
+            else if (Settings.ToggleZoom)
+            {
+                if (!guiOpen && MyInput.Static.IsNewKeyPressed(Plugin.Settings.ZoomKey))
                 {
-                    if (MyInput.Static.IsNewKeyPressed(Plugin.Settings.ZoomKey))
-                    {
-                        _zoomAmount = ChangeZoomDirection(_zoomAmount);
-                        _zoom = !_zoom;
-                    }
+                    _zoomAmount = ChangeZoomDirection(_zoomAmount);
+                    _zoom = !_zoom;
                 }
-                else
+            }
+            else
+            {
+                bool newZoom = !guiOpen && MyInput.Static.IsKeyPress(Plugin.Settings.ZoomKey);
+                if (newZoom != _zoom)
                 {
-                    bool newZoom = MyInput.Static.IsKeyPress(Plugin.Settings.ZoomKey);
-                    if (newZoom != _zoom)
-                    {
-                        _zoomAmount = ChangeZoomDirection(_zoomAmount);
-                        _zoom = newZoom;
-                    }
+                    _zoomAmount = ChangeZoomDirection(_zoomAmount);
+                    _zoom = newZoom;
                 }
             }
         }
