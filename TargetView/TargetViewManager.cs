@@ -1,5 +1,6 @@
 ﻿using Sandbox.Game.Entities;
 using Sandbox.Game.EntityComponents;
+using Sandbox.Game.Gui;
 using Sandbox.Game.World;
 using Sandbox.Graphics;
 using Sandbox.ModAPI.Physics;
@@ -179,21 +180,24 @@ public static class TargetViewManager
                 _targetGrid = target;
             }
 
-            if (Settings.ToggleZoom)
+            if (!(MyHud.Chat != null && MyHud.Chat.m_chatScreenOpen) && !MyGuiScreenTerminal.IsOpen)
             {
-                if (MyInput.Static.IsNewKeyPressed(Plugin.Settings.ZoomKey))
+                if (Settings.ToggleZoom)
                 {
-                    _zoomAmount = ChangeZoomDirection(_zoomAmount);
-                    _zoom = !_zoom;
+                    if (MyInput.Static.IsNewKeyPressed(Plugin.Settings.ZoomKey))
+                    {
+                        _zoomAmount = ChangeZoomDirection(_zoomAmount);
+                        _zoom = !_zoom;
+                    }
                 }
-            }
-            else
-            {
-                bool newZoom = MyInput.Static.IsKeyPress(Plugin.Settings.ZoomKey);
-                if (newZoom != _zoom)
+                else
                 {
-                    _zoomAmount = ChangeZoomDirection(_zoomAmount);
-                    _zoom = newZoom;
+                    bool newZoom = MyInput.Static.IsKeyPress(Plugin.Settings.ZoomKey);
+                    if (newZoom != _zoom)
+                    {
+                        _zoomAmount = ChangeZoomDirection(_zoomAmount);
+                        _zoom = newZoom;
+                    }
                 }
             }
         }
@@ -217,7 +221,8 @@ public static class TargetViewManager
 
     public static void HandleInput()
     {
-        if (!WcApiSession.WcPresent || !_controlled.HasValue || !_target.HasValue || _targetGrid?.PositionComp is null || Settings.PainterKey is MyKeys.None)
+        bool chatOpen = MyHud.Chat != null && MyHud.Chat.m_chatScreenOpen;
+        if (!WcApiSession.WcPresent || !_controlled.HasValue || !_target.HasValue || _targetGrid?.PositionComp is null || Settings.PainterKey is MyKeys.None || chatOpen || MyGuiScreenTerminal.IsOpen)
         {
             IsPainting = false;
             return;
