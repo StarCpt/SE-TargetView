@@ -119,7 +119,6 @@ public static class TargetViewManager
     private static bool _zoom = false;
     private static float _zoomAmount = 0; // 0 = no zoom, 1 = full zoom
 
-    private static MyCubeGrid? _controlledGrid;
     private static MyCubeGrid? _targetGrid;
 
     /// <summary>
@@ -148,14 +147,11 @@ public static class TargetViewManager
             target = lockedEntity.GetTopMostParent(typeof(MyCubeGrid)) as MyCubeGrid;
         }
 
-        bool newZoom = MyInput.Static.IsKeyPress(Plugin.Settings.ZoomKey);
-
         lock (_sync)
         {
             if (controlledCockpit is null || controlledGrid?.PositionComp is null)
             {
                 _controlled = null;
-                _controlledGrid = null;
             }
             else
             {
@@ -165,7 +161,6 @@ public static class TargetViewManager
                     CockpitActorId = controlledCockpit.Render?.GetRenderObjectID() ?? uint.MaxValue,
                     LocalVolume = controlledGrid.PositionComp.LocalVolume,
                 };
-                _controlledGrid = controlledGrid;
             }
 
             if (target?.PositionComp is null)
@@ -222,13 +217,24 @@ public static class TargetViewManager
 
     public static void HandleInput()
     {
-        if (!WcApiSession.WcPresent || !_controlled.HasValue || !_target.HasValue || _targetGrid?.PositionComp is null)
+        if (!WcApiSession.WcPresent || !_controlled.HasValue || !_target.HasValue || _targetGrid?.PositionComp is null || Settings.PainterKey is MyKeys.None)
         {
             IsPainting = false;
             return;
         }
 
-        IsPainting = Plugin.Settings.PainterKey != MyKeys.None && MyInput.Static.IsKeyPress(Plugin.Settings.PainterKey);
+        if (Settings.TogglePainter)
+        {
+            if (MyInput.Static.IsNewKeyPressed(Plugin.Settings.PainterKey))
+            {
+                IsPainting = !IsPainting;
+            }
+        }
+        else
+        {
+            IsPainting = MyInput.Static.IsKeyPress(Plugin.Settings.PainterKey);
+        }
+
         if (IsPainting && MyTransparentMaterials.TryGetMaterial(WcApiSession.Materials.TargetReticle, out var targetReticleMaterial))
         {
             // draw cursor

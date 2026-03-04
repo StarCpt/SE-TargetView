@@ -27,6 +27,7 @@ public class TargetViewSettings
     public MyKeys ZoomKey { get; set; } = MyKeys.M;
     public bool ToggleZoom { get; set; } = false;
     public MyKeys PainterKey { get; set; } = MyKeys.B;
+    public bool TogglePainter { get; set; } = false;
     public Color PainterCursorColor { get; set; } = Color.White;
     public int PainterCursorSize { get; set; } = 32;
 

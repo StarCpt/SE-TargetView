@@ -122,7 +122,7 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
         MyGuiControlButton zoomBindingButton = AddKeyboardKeyBindingButton(pos, Plugin.Settings.ZoomKey, key => Plugin.Settings.ZoomKey = key, MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
         AddCaption(zoomBindingButton, "Zoom Key", -0.005f);
 
-        MyGuiControlCheckbox zoomToggleCheckbox = new(new Vector2(pos.X + 0.135f, pos.Y - 0.0045f), toolTip: "Off: Hold to zoom\nOn: Toggles zoom", isChecked: settings.ToggleZoom, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
+        MyGuiControlCheckbox zoomToggleCheckbox = new(new Vector2(pos.X + 0.135f, pos.Y - 0.0045f), toolTip: "Changes key behavior\nOff: Hold to zoom\nOn: Toggles zoom", isChecked: settings.ToggleZoom, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
         zoomToggleCheckbox.IsCheckedChanged += _ => settings.ToggleZoom = zoomToggleCheckbox.IsChecked;
         AddControl(zoomToggleCheckbox);
         AddCaption(zoomToggleCheckbox, "Toggle", xOffset: 0.085f);
@@ -133,6 +133,12 @@ public class MyGuiScreenPluginConfig : MyGuiScreenBase
             MyGuiControlButton painterBindingButton = AddKeyboardKeyBindingButton(pos, Plugin.Settings.PainterKey, key => Plugin.Settings.PainterKey = key, MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
             painterBindingButton.SetToolTip("Only available when using WeaponCore.\nShows paint cursor in target view window\nand disables gyro control when this key is pressed.");
             AddCaption(painterBindingButton, "Painter Key", -0.005f);
+
+            MyGuiControlCheckbox painterToggleCheckbox = new(new Vector2(pos.X + 0.135f, pos.Y - 0.0045f), toolTip: "Changes key behavior\nOff: Hold to paint\nOn: Toggles painter", isChecked: settings.TogglePainter, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP);
+            painterToggleCheckbox.IsCheckedChanged += _ => settings.TogglePainter = painterToggleCheckbox.IsChecked;
+            AddControl(painterToggleCheckbox);
+            AddCaption(painterToggleCheckbox, "Toggle", xOffset: 0.085f);
+
             pos.Y += painterBindingButton.Size.Y + space;
 
             MyGuiControlColor painterCursorColorPicker = AddColorPicker(
