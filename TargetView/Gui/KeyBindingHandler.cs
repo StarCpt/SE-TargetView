@@ -41,11 +41,18 @@ public class KeyBindingHandler
         MyInput.Static.GetPressedKeys(_currentKeys);
         foreach (MyKeys key in _currentKeys)
         {
-            if (MyInput.Static.IsNewKeyPressed(key) && MyInput.Static.IsKeyValid(key))
+            if (MyInput.Static.IsNewKeyPressed(key) && IsValidKeyOrMouseButton(key))
             {
                 SetKey(key);
                 return;
             }
+        }
+
+        static bool IsValidKeyOrMouseButton(MyKeys key)
+        {
+            if (MyInput.Static.IsKeyValid(key))
+                return true;
+            return key is MyKeys.LeftButton or MyKeys.RightButton or MyKeys.MiddleButton or MyKeys.ExtraButton1 or MyKeys.ExtraButton2;
         }
     }
 
